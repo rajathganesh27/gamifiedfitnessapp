@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "94990171575",
+    "project_id": "gafurv1",
+    "storage_bucket": "gafurv1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94990171575:android:6c1790d5fce152c4827c32",
+        "android_client_info": {
+          "package_name": "com.example.gafur4"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGvnddKDH1yYi_KCRsq8CXk0ES4w3b-Rg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94990171575:android:92c96498bd75c7d6827c32",
+        "android_client_info": {
+          "package_name": "com.example.gafurv1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGvnddKDH1yYi_KCRsq8CXk0ES4w3b-Rg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:94990171575:android:719a482da29fd8c3827c32",
+        "android_client_info": {
+          "package_name": "com.example.gamifiedfitnessapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGvnddKDH1yYi_KCRsq8CXk0ES4w3b-Rg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
