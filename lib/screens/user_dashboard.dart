@@ -1,35 +1,60 @@
 import 'package:flutter/material.dart';
-import 'leaderboard_screen.dart';
-import 'profile_screen.dart';
+import 'package:gamifiedfitnessapp/model/exercise_dart_model.dart';
+import 'package:gamifiedfitnessapp/screens/leaderboard_screen.dart';
+import 'package:gamifiedfitnessapp/screens/profile_screen.dart';
+import 'package:gamifiedfitnessapp/screens/detection_screen.dart';
+import 'package:camera/camera.dart';
 
-class UserDashboard extends StatelessWidget {
-  final List<Map<String, dynamic>> workouts = [
-    {
-      'name': 'Boxer',
-      'image': 'assets/images/download.jpg',
-      'duration': '0:40 min',
-    },
-    {
-      'name': 'GetOut',
-      'image': 'assets/images/download.jpg',
-      'duration': '0:40 min',
-    },
-    {
-      'name': 'Ufo',
-      'image': 'assets/images/download.jpg',
-      'duration': '1:07 min',
-    },
-    {
-      'name': 'KneeShooter',
-      'image': 'assets/images/download.jpg',
-      'duration': '0:50 min',
-    },
+class UserDashboard extends StatefulWidget {
+  @override
+  State<UserDashboard> createState() => _UserDashboardState();
+}
+
+class _UserDashboardState extends State<UserDashboard> {
+  List<CameraDescription> _cameras = [];
+
+  final List<ExerciseDataModel> workouts = [
+    ExerciseDataModel(
+      title: 'Push Ups',
+      image: 'pushup.gif',
+      color: Color(0xff005F9C),
+      type: ExerciseType.PushUps,
+    ),
+    ExerciseDataModel(
+      title: 'Squats',
+      image: 'squat.gif',
+      color: Color(0xffDF5089),
+      type: ExerciseType.Squats,
+    ),
+    ExerciseDataModel(
+      title: 'Plank to Downward Dog',
+      image: 'plank.gif',
+      color: Color(0xffFD8636),
+      type: ExerciseType.DownwardDogPlank,
+    ),
+    ExerciseDataModel(
+      title: 'Jumping Jack',
+      image: 'jumping.gif',
+      color: Color(0xff000000),
+      type: ExerciseType.JumpingJack,
+    ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    loadCameras();
+  }
+
+  Future<void> loadCameras() async {
+    _cameras = await availableCameras();
+    setState(() {}); // Rebuild when cameras are loaded
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF0E0E12), // Dark background
+      backgroundColor: Color(0xFF0E0E12),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -71,7 +96,7 @@ class UserDashboard extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: Image.asset(
-                              workout['image'],
+                              'assets/${workout.image}',
                               width: 60,
                               height: 60,
                               fit: BoxFit.cover,
@@ -83,7 +108,7 @@ class UserDashboard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  workout['name'],
+                                  workout.title,
                                   style: TextStyle(
                                     fontSize: 18,
                                     color: Colors.white,
@@ -99,7 +124,7 @@ class UserDashboard extends StatelessWidget {
                                     ),
                                     SizedBox(width: 5),
                                     Text(
-                                      workout['duration'],
+                                      "Live AI Detection",
                                       style: TextStyle(color: Colors.white70),
                                     ),
                                   ],
@@ -108,9 +133,21 @@ class UserDashboard extends StatelessWidget {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () {
-                              // TODO: Start workout logic
-                            },
+                            onPressed:
+                                _cameras.isEmpty
+                                    ? null
+                                    : () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => DetectionScreen(
+                                                exerciseDataModel: workout,
+                                                cameras: _cameras,
+                                              ),
+                                        ),
+                                      );
+                                    },
                             child: Text("Start"),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Color(0xFFFFD700),
