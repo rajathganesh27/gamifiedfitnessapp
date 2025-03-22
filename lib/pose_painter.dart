@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
 class PosePainter extends CustomPainter {
-  PosePainter(this.absoluteImageSize, this.poses);
+  PosePainter(this.absoluteImageSize, this.poses, {this.isFrontCamera = true});
 
   final Size absoluteImageSize;
   final List<Pose> poses;
+  final bool isFrontCamera;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -33,11 +34,13 @@ class PosePainter extends CustomPainter {
 
     for (final pose in poses) {
       pose.landmarks.forEach((_, landmark) {
-        canvas.drawCircle(
-          Offset(landmark.x * scaleX, landmark.y * scaleY),
-          3,
-          dotPaint,
-        );
+        // Apply horizontal flipping for front camera
+        double x = landmark.x;
+        if (isFrontCamera) {
+          x = absoluteImageSize.width - x;
+        }
+
+        canvas.drawCircle(Offset(x * scaleX, landmark.y * scaleY), 3, dotPaint);
       });
 
       void paintLine(
@@ -48,9 +51,17 @@ class PosePainter extends CustomPainter {
         final PoseLandmark? joint1 = pose.landmarks[type1];
         final PoseLandmark? joint2 = pose.landmarks[type2];
         if (joint1 != null && joint2 != null) {
+          // Apply horizontal flipping for front camera
+          double x1 = joint1.x;
+          double x2 = joint2.x;
+          if (isFrontCamera) {
+            x1 = absoluteImageSize.width - x1;
+            x2 = absoluteImageSize.width - x2;
+          }
+
           canvas.drawLine(
-            Offset(joint1.x * scaleX, joint1.y * scaleY),
-            Offset(joint2.x * scaleX, joint2.y * scaleY),
+            Offset(x1 * scaleX, joint1.y * scaleY),
+            Offset(x2 * scaleX, joint2.y * scaleY),
             paintType,
           );
         }
