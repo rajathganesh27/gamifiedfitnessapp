@@ -1,7 +1,7 @@
 // lib/model/exercise_data_model.dart
 import 'package:flutter/material.dart';
 
-enum ExerciseType { PushUps, Squats, DownwardDogPlank, JumpingJack }
+enum ExerciseType { PushUps, Squats, DownwardDogPlank, JumpingJack, BicepCurl }
 
 class ExerciseDataModel {
   final String title;

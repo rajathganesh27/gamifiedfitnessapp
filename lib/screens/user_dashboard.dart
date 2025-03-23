@@ -26,17 +26,23 @@ class _UserDashboardState extends State<UserDashboard> {
       color: Color(0xffDF5089),
       type: ExerciseType.Squats,
     ),
-    ExerciseDataModel(
-      title: 'Plank to Downward Dog',
-      image: 'plank.gif',
-      color: Color(0xffFD8636),
-      type: ExerciseType.DownwardDogPlank,
-    ),
+    // ExerciseDataModel(
+    //   title: 'Plank to Downward Dog',
+    //   image: 'plank.gif',
+    //   color: Color(0xffFD8636),
+    //   type: ExerciseType.DownwardDogPlank,
+    // ),
     ExerciseDataModel(
       title: 'Jumping Jack',
       image: 'jumping.gif',
       color: Color(0xff000000),
       type: ExerciseType.JumpingJack,
+    ),
+    ExerciseDataModel(
+      title: 'Bicep Curl',
+      image: 'curl.gif',
+      color: Color(0xff000000),
+      type: ExerciseType.BicepCurl,
     ),
   ];
 
@@ -83,81 +89,85 @@ class _UserDashboardState extends State<UserDashboard> {
                 itemCount: workouts.length,
                 itemBuilder: (context, index) {
                   final workout = workouts[index];
-                  return Card(
-                    color: Color(0xFF1C1C1E),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    margin: EdgeInsets.symmetric(vertical: 8),
-                    child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.asset(
-                              'assets/${workout.image}',
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  workout.title,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(height: 5),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.timer,
-                                      color: Colors.orange,
-                                      size: 16,
-                                    ),
-                                    SizedBox(width: 5),
-                                    Text(
-                                      "Live AI Detection",
-                                      style: TextStyle(color: Colors.white70),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed:
-                                _cameras.isEmpty
-                                    ? null
-                                    : () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) => DetectionScreen(
-                                                exerciseDataModel: workout,
-                                                cameras: _cameras,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                            child: Text("Start"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFFD700),
-                              foregroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                  return SizedBox(
+                    height: 150, // Adjust the height here
+                    child: Card(
+                      color: Color(0xFF1C1C1E),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      margin: EdgeInsets.symmetric(vertical: 8),
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.asset(
+                                'assets/${workout.image}',
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
                               ),
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    workout.title,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 5),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.timer,
+                                        color: Colors.orange,
+                                        size: 16,
+                                      ),
+                                      // SizedBox(width: 5),
+                                      // Text(
+                                      //   "Live AI Detection",
+                                      //   style: TextStyle(color: Colors.white70),
+                                      // ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed:
+                                  _cameras.isEmpty
+                                      ? null
+                                      : () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) => DetectionScreen(
+                                                  exerciseDataModel: workout,
+                                                  cameras: _cameras,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                              child: Text("Start"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFFFFD700),
+                                foregroundColor: Colors.black,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );

@@ -9,16 +9,24 @@ import 'package:flutter/services.dart';
 import 'package:gamifiedfitnessapp/model/exercise_dart_model.dart';
 import 'package:gamifiedfitnessapp/pose_painter.dart';
 import 'package:gamifiedfitnessapp/screens/squat_game.dart';
+import 'package:gamifiedfitnessapp/screens/jumping_jack_game.dart';
+import 'package:gamifiedfitnessapp/screens/bicep_curl_game.dart'; // Import the bicep curl game
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:gamifiedfitnessapp/screens/pushup_game.dart';
 
 class DetectionScreen extends StatefulWidget {
   final ExerciseDataModel exerciseDataModel;
   final List<CameraDescription> cameras;
-
+  final isLoweredStreamController = StreamController<bool>.broadcast();
   DetectionScreen({required this.exerciseDataModel, required this.cameras});
 
   @override
   State<DetectionScreen> createState() => _DetectionScreenState();
+  // void dispose() {
+  //   // Add the new stream to the dispose method
+  //   _isLoweredStreamController.close();
+  //   super.dispose();
+  // }
 }
 
 class _DetectionScreenState extends State<DetectionScreen> {
@@ -32,6 +40,14 @@ class _DetectionScreenState extends State<DetectionScreen> {
   // State for showing game
   bool _showGame = false;
   final _isSquattingStreamController = StreamController<bool>.broadcast();
+  // Stream for jumping jack hand positions
+  final _landmarksStreamController =
+      StreamController<Map<PoseLandmarkType, PoseLandmark>>.broadcast();
+  // Stream for bicep curl state
+  final _isCurlingStreamController = StreamController<bool>.broadcast();
+  final _isLoweredStreamController = StreamController<bool>.broadcast();
+  // Track current camera index
+  int _currentCameraIndex = 1; // Default to front camera (index 1)
 
   @override
   void initState() {
@@ -46,7 +62,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     poseDetector = PoseDetector(options: options);
 
     controller = CameraController(
-      widget.cameras[1],
+      widget.cameras[_currentCameraIndex],
       ResolutionPreset.medium,
       imageFormatGroup:
           Platform.isAndroid
@@ -65,6 +81,47 @@ class _DetectionScreenState extends State<DetectionScreen> {
     });
   }
 
+  // Handle camera toggle
+  void toggleCamera(CameraLensDirection direction) async {
+    if (controller != null) {
+      await controller.stopImageStream();
+      await controller.dispose();
+    }
+
+    // Find the camera index with the requested direction
+    int newIndex = widget.cameras.indexWhere(
+      (camera) => camera.lensDirection == direction,
+    );
+
+    if (newIndex != -1) {
+      _currentCameraIndex = newIndex;
+
+      controller = CameraController(
+        widget.cameras[_currentCameraIndex],
+        ResolutionPreset.medium,
+        imageFormatGroup:
+            Platform.isAndroid
+                ? ImageFormatGroup.nv21
+                : ImageFormatGroup.bgra8888,
+      );
+
+      try {
+        await controller.initialize();
+        if (mounted) {
+          controller.startImageStream(
+            (image) => {
+              if (!isBusy)
+                {isBusy = true, img = image, doPoseEstimationOnFrame()},
+            },
+          );
+          setState(() {});
+        }
+      } catch (e) {
+        print("Error toggling camera: $e");
+      }
+    }
+  }
+
   // Pose detection on a frame
   dynamic _scanResults;
   CameraImage? img;
@@ -75,9 +132,9 @@ class _DetectionScreenState extends State<DetectionScreen> {
       print("pose=" + poses.length.toString());
       _scanResults = poses;
       if (poses.length > 0) {
-        if (widget.exerciseDataModel.type == ExerciseType.PushUps)
+        if (widget.exerciseDataModel.type == ExerciseType.PushUps) {
           detectPushUp(poses.first.landmarks);
-        else if (widget.exerciseDataModel.type == ExerciseType.Squats) {
+        } else if (widget.exerciseDataModel.type == ExerciseType.Squats) {
           detectSquat(poses.first.landmarks);
           // Stream squatting state for the game
           if (isSquatting) {
@@ -86,10 +143,21 @@ class _DetectionScreenState extends State<DetectionScreen> {
             _isSquattingStreamController.add(false);
           }
         } else if (widget.exerciseDataModel.type ==
-            ExerciseType.DownwardDogPlank)
+            ExerciseType.DownwardDogPlank) {
           detectPlankToDownwardDog(poses.first);
-        else if (widget.exerciseDataModel.type == ExerciseType.JumpingJack)
+        } else if (widget.exerciseDataModel.type == ExerciseType.JumpingJack) {
           detectJumpingJack(poses.first);
+          // Stream landmarks for the jumping jack game
+          _landmarksStreamController.add(poses.first.landmarks);
+        } else if (widget.exerciseDataModel.type == ExerciseType.BicepCurl) {
+          detectBicepCurl(poses.first.landmarks);
+          // Stream curling state for the game
+          if (isCurling) {
+            _isCurlingStreamController.add(true);
+          } else {
+            _isCurlingStreamController.add(false);
+          }
+        }
       }
     }
     setState(() {
@@ -104,6 +172,10 @@ class _DetectionScreenState extends State<DetectionScreen> {
     controller?.dispose();
     poseDetector.close();
     _isSquattingStreamController.close();
+    _landmarksStreamController.close();
+    _isCurlingStreamController.close();
+    _isLoweredStreamController.close(); // ✅ Local stream closed
+    widget.isLoweredStreamController.close(); // existing one
     super.dispose();
   }
 
@@ -112,20 +184,75 @@ class _DetectionScreenState extends State<DetectionScreen> {
     List<Widget> stackChildren = [];
     size = MediaQuery.of(context).size;
 
-    // If showing the game, render it
-    if (_showGame && widget.exerciseDataModel.type == ExerciseType.Squats) {
-      return Scaffold(
-        body: SquatGame(
-          isSquattingStream: _isSquattingStreamController.stream,
-          cameraController: controller,
-          poseResults: _scanResults,
-          onGameComplete: (score) {
-            setState(() {
-              _showGame = false;
-            });
-          },
-        ),
-      );
+    // If showing the game, render the appropriate game screen
+    if (_showGame) {
+      if (widget.exerciseDataModel.type == ExerciseType.Squats) {
+        return Scaffold(
+          body: SquatGame(
+            isSquattingStream: _isSquattingStreamController.stream,
+            cameraController: controller,
+            poseResults: _scanResults,
+            onGameComplete: (score) {
+              setState(() {
+                _showGame = false;
+              });
+            },
+            onCameraToggle: (direction) {
+              toggleCamera(direction);
+            },
+          ),
+        );
+      } else if (widget.exerciseDataModel.type == ExerciseType.PushUps) {
+        return Scaffold(
+          body: PushUpGame(
+            isLoweredStream:
+                _isLoweredStreamController.stream, // ✅ Local stream here
+            cameraController: controller,
+            poseResults: _scanResults,
+            onGameComplete: (score) {
+              print("Game completed with score: $score");
+              setState(() {
+                _showGame = false;
+              });
+            },
+            onCameraToggle: (direction) {
+              toggleCamera(direction);
+            },
+          ),
+        );
+      } else if (widget.exerciseDataModel.type == ExerciseType.JumpingJack) {
+        return Scaffold(
+          body: JumpingJackGame(
+            landmarksStream: _landmarksStreamController.stream,
+            cameraController: controller,
+            poseResults: _scanResults,
+            onGameComplete: (score) {
+              setState(() {
+                _showGame = false;
+              });
+            },
+            onCameraToggle: (direction) {
+              toggleCamera(direction);
+            },
+          ),
+        );
+      } else if (widget.exerciseDataModel.type == ExerciseType.BicepCurl) {
+        return Scaffold(
+          body: BicepCurlGame(
+            isCurlingStream: _isCurlingStreamController.stream,
+            cameraController: controller,
+            poseResults: _scanResults,
+            onGameComplete: (score) {
+              setState(() {
+                _showGame = false;
+              });
+            },
+            onCameraToggle: (direction) {
+              toggleCamera(direction);
+            },
+          ),
+        );
+      }
     }
 
     if (controller != null) {
@@ -179,6 +306,9 @@ class _DetectionScreenState extends State<DetectionScreen> {
                         : widget.exerciseDataModel.type ==
                             ExerciseType.DownwardDogPlank
                         ? "$plankToDownwardDogCount"
+                        : widget.exerciseDataModel.type ==
+                            ExerciseType.BicepCurl
+                        ? "$bicepCurlCount"
                         : "$jumpingJackCount",
                     style: TextStyle(
                       color: Colors.white,
@@ -191,8 +321,11 @@ class _DetectionScreenState extends State<DetectionScreen> {
                 height: 70,
               ),
 
-              // Add game button for Squats
-              if (widget.exerciseDataModel.type == ExerciseType.Squats)
+              // Add game button for Squats, Jumping Jacks, or Bicep Curls
+              if (widget.exerciseDataModel.type == ExerciseType.PushUps ||
+                  widget.exerciseDataModel.type == ExerciseType.Squats ||
+                  widget.exerciseDataModel.type == ExerciseType.JumpingJack ||
+                  widget.exerciseDataModel.type == ExerciseType.BicepCurl)
                 Container(
                   margin: EdgeInsets.only(left: 20, bottom: 20),
                   child: ElevatedButton(
@@ -213,6 +346,35 @@ class _DetectionScreenState extends State<DetectionScreen> {
                     ),
                   ),
                 ),
+
+              // Add camera toggle button in the main screen too
+              Container(
+                margin: EdgeInsets.only(left: 20, bottom: 20),
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Toggle between front and back cameras
+                    CameraLensDirection newDirection =
+                        controller.description.lensDirection ==
+                                CameraLensDirection.back
+                            ? CameraLensDirection.front
+                            : CameraLensDirection.back;
+                    toggleCamera(newDirection);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
+                    shape: CircleBorder(),
+                    padding: EdgeInsets.all(15),
+                  ),
+                  child: Icon(
+                    controller.description.lensDirection ==
+                            CameraLensDirection.back
+                        ? Icons.camera_front
+                        : Icons.camera_rear,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -286,10 +448,9 @@ class _DetectionScreenState extends State<DetectionScreen> {
         rightWrist == null ||
         leftHip == null ||
         rightHip == null) {
-      return; // Skip if any landmark is missing
+      return;
     }
 
-    // Calculate elbow angles
     double leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
     double rightElbowAngle = calculateAngle(
       rightShoulder,
@@ -298,24 +459,32 @@ class _DetectionScreenState extends State<DetectionScreen> {
     );
     double avgElbowAngle = (leftElbowAngle + rightElbowAngle) / 2;
 
-    // Calculate torso alignment (ensuring a straight plank)
     double torsoAngle = calculateAngle(
       leftShoulder,
       leftHip,
       leftKnee ?? rightKnee!,
     );
-    bool inPlankPosition =
-        torsoAngle > 160 && torsoAngle < 180; // Slight flexibility
 
-    if (avgElbowAngle < 90 && inPlankPosition) {
-      // User is in the lowered push-up position
-      isLowered = true;
-    } else if (avgElbowAngle > 160 && isLowered && inPlankPosition) {
-      // User returns to the starting position
+    bool inPlankPosition = torsoAngle > 150 && torsoAngle < 190;
+
+    double shoulderHeight = (leftShoulder.y + rightShoulder.y) / 2;
+    double hipHeight = (leftHip.y + rightHip.y) / 2;
+    bool shouldersAligned = (shoulderHeight - hipHeight).abs() < 50;
+
+    if (avgElbowAngle < 100 && inPlankPosition && shouldersAligned) {
+      if (!isLowered) {
+        isLowered = true;
+        _isLoweredStreamController.add(true); // ✅ Local stream used here
+        print("Pushup lowered position detected");
+      }
+    } else if (avgElbowAngle > 150 &&
+        isLowered &&
+        inPlankPosition &&
+        shouldersAligned) {
       pushUpCount++;
       isLowered = false;
-
-      // Update UI
+      _isLoweredStreamController.add(false); // ✅ Local stream used here
+      print("Pushup count: $pushUpCount");
       setState(() {});
     }
   }
@@ -467,6 +636,58 @@ class _DetectionScreenState extends State<DetectionScreen> {
     }
   }
 
+  // New function to detect bicep curls
+  int bicepCurlCount = 0;
+  bool isCurling = false;
+  void detectBicepCurl(Map<PoseLandmarkType, PoseLandmark> landmarks) {
+    final leftShoulder = landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = landmarks[PoseLandmarkType.rightShoulder];
+    final leftElbow = landmarks[PoseLandmarkType.leftElbow];
+    final rightElbow = landmarks[PoseLandmarkType.rightElbow];
+    final leftWrist = landmarks[PoseLandmarkType.leftWrist];
+    final rightWrist = landmarks[PoseLandmarkType.rightWrist];
+
+    if (leftShoulder == null ||
+        rightShoulder == null ||
+        leftElbow == null ||
+        rightElbow == null ||
+        leftWrist == null ||
+        rightWrist == null) {
+      return; // Skip if any key landmark is missing
+    }
+
+    // Calculate elbow angles
+    double leftElbowAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+    double rightElbowAngle = calculateAngle(
+      rightShoulder,
+      rightElbow,
+      rightWrist,
+    );
+
+    // We'll use either the left or right arm depending on which is more visible
+    double elbowAngle = leftElbowAngle;
+
+    // Check if right arm is more clearly visible
+    bool useRightArm =
+        rightShoulder.likelihood > leftShoulder.likelihood &&
+        rightElbow.likelihood > leftElbow.likelihood &&
+        rightWrist.likelihood > leftWrist.likelihood;
+
+    if (useRightArm) {
+      elbowAngle = rightElbowAngle;
+    }
+
+    // Consider doing a bicep curl when elbow angle is less than 90 degrees
+    if (elbowAngle < 60 && !isCurling) {
+      isCurling = true;
+    } else if (elbowAngle > 150 && isCurling) {
+      bicepCurlCount++;
+      isCurling = false;
+      print("Bicep Curl Count: $bicepCurlCount");
+      setState(() {});
+    }
+  }
+
   // Function to calculate angle between three points (shoulder, elbow, wrist)
   double calculateAngle(
     PoseLandmark shoulder,
@@ -497,7 +718,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     // it is used in android to convert the InputImage from Dart to Java
     // `rotation` is not used in iOS to convert the InputImage from Dart to Obj-C
     // in both platforms `rotation` and `camera.lensDirection` can be used to compensate `x` and `y` coordinates on a canvas
-    final camera = widget.cameras[1];
+    final camera = widget.cameras[_currentCameraIndex];
     final sensorOrientation = camera.sensorOrientation;
     InputImageRotation? rotation;
     if (Platform.isIOS) {
@@ -557,8 +778,9 @@ class _DetectionScreenState extends State<DetectionScreen> {
       controller.value.previewSize!.width,
     );
 
-    // Check if using front camera
-    bool isFrontCamera = widget.cameras[1] == controller.description;
+    // Check camera direction correctly based on the current active camera
+    bool isFrontCamera =
+        controller.description.lensDirection == CameraLensDirection.front;
 
     CustomPainter painter = PosePainter(
       imageSize,

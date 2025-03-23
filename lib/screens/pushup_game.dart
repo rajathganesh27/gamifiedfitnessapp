@@ -5,16 +5,16 @@ import 'package:camera/camera.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:gamifiedfitnessapp/pose_painter.dart';
 
-class SquatGame extends StatefulWidget {
-  final Stream<bool> isSquattingStream;
+class PushUpGame extends StatefulWidget {
+  final Stream<bool> isLoweredStream;
   final Function(int) onGameComplete;
   final CameraController? cameraController;
-  final List<Pose>? poseResults; // Add pose results to display body points
+  final List<Pose>? poseResults;
   final Function(CameraLensDirection) onCameraToggle;
 
-  const SquatGame({
+  const PushUpGame({
     Key? key,
-    required this.isSquattingStream,
+    required this.isLoweredStream,
     required this.onGameComplete,
     this.cameraController,
     this.poseResults,
@@ -22,75 +22,95 @@ class SquatGame extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _SquatGameState createState() => _SquatGameState();
+  _PushUpGameState createState() => _PushUpGameState();
 }
 
-class _SquatGameState extends State<SquatGame>
+class _PushUpGameState extends State<PushUpGame>
     with SingleTickerProviderStateMixin {
-  late AnimationController _ballController;
-  double _ballPosition = 0.5; // 0 is top, 1 is bottom
+  late AnimationController _platformController;
+  double _platformPosition = 0.5; // 0 is top, 1 is bottom
   double _targetPosition = 0.5;
   int _score = 0;
-  late StreamSubscription _squatSubscription;
+  late StreamSubscription _pushupSubscription;
   bool _gameActive = false;
+  final List<Coin> _coins = [];
   final List<Obstacle> _obstacles = [];
   Timer? _gameTimer;
+  Timer? _coinTimer;
   Timer? _obstacleTimer;
   final Random _random = Random();
   bool _gameOver = false;
   int _countdownValue = 3; // Countdown timer starting value
   bool _isCountingDown = false;
 
-  // Ball properties
-  final double _ballSize = 50;
+  // Camera direction tracking
+  CameraLensDirection _currentLensDirection = CameraLensDirection.back;
 
-  // Reduced obstacle speed significantly
-  final double _obstacleSpeed = 1.5; // Very slow speed for obstacles
+  // Platform properties
+  final double _platformWidth = 80;
+  final double _platformHeight = 20;
+
+  // Game speed (pixels per frame)
+  final double _gameSpeed = 2.0;
+
+  // Theme color
+  final Color _themeColor = Colors.red;
 
   @override
   void initState() {
     super.initState();
 
-    // Create animation controller for smooth ball movement
-    _ballController = AnimationController(
+    // Get initial camera direction if available
+    if (widget.cameraController != null) {
+      _currentLensDirection =
+          widget.cameraController!.description.lensDirection;
+    }
+
+    // Create animation controller for smooth platform movement
+    _platformController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 300),
     )..addListener(() {
       setState(() {
-        // Update ball position based on animation
-        _ballPosition = _ballController.value;
+        // Update platform position based on animation
+        _platformPosition = _platformController.value;
       });
     });
 
-    // Listen to squatting state changes
-    _squatSubscription = widget.isSquattingStream.listen((isSquatting) {
+    // Listen to pushup state changes - improved responsiveness
+    _pushupSubscription = widget.isLoweredStream.listen((isLowered) {
       if (!_gameActive) return;
 
-      // Set target position based on squatting state
-      if (isSquatting) {
-        // Move ball up when squatting
-        _targetPosition = 0.2;
-      } else {
-        // Move ball down when standing
+      // Set target position based on pushup state
+      if (isLowered) {
+        // Move platform down when in lowered position
         _targetPosition = 0.8;
+      } else {
+        // Move platform up when in raised position
+        _targetPosition = 0.2;
       }
 
-      // Start animation to target position
-      _ballController.animateTo(
+      // Start animation to target position with faster response
+      _platformController.animateTo(
         _targetPosition,
         curve: Curves.easeOut,
-        duration: Duration(milliseconds: 300),
+        duration: Duration(milliseconds: 200),
       );
     });
   }
 
   void _toggleCamera() {
+    // Toggle between front and back cameras
     CameraLensDirection newDirection =
-        widget.cameraController?.description.lensDirection ==
-                CameraLensDirection.back
+        _currentLensDirection == CameraLensDirection.back
             ? CameraLensDirection.front
             : CameraLensDirection.back;
 
+    setState(() {
+      _currentLensDirection = newDirection;
+    });
+
+    // Call the parent's camera toggle function
     widget.onCameraToggle(newDirection);
   }
 
@@ -100,6 +120,7 @@ class _SquatGameState extends State<SquatGame>
       _isCountingDown = true;
       _countdownValue = 3;
       _score = 0;
+      _coins.clear();
       _obstacles.clear();
       _gameOver = false;
     });
@@ -128,8 +149,18 @@ class _SquatGameState extends State<SquatGame>
       _gameActive = true;
     });
 
-    // Create obstacles periodically (less frequently)
-    _obstacleTimer = Timer.periodic(Duration(milliseconds: 3000), (timer) {
+    // Create coins periodically
+    _coinTimer = Timer.periodic(Duration(milliseconds: 2000), (timer) {
+      if (!mounted || !_gameActive) {
+        timer.cancel();
+        return;
+      }
+
+      _addCoin();
+    });
+
+    // Create obstacles periodically
+    _obstacleTimer = Timer.periodic(Duration(milliseconds: 4000), (timer) {
       if (!mounted || !_gameActive) {
         timer.cancel();
         return;
@@ -149,26 +180,39 @@ class _SquatGameState extends State<SquatGame>
     });
   }
 
+  void _addCoin() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Randomize coin vertical position
+    final coinY =
+        _random.nextDouble() * (screenHeight * 0.6) + (screenHeight * 0.2);
+
+    // Size of coins
+    final coinSize = 30.0;
+
+    setState(() {
+      _coins.add(Coin(x: screenWidth, y: coinY, size: coinSize));
+    });
+  }
+
   void _addObstacle() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Determine if obstacle should be in upper or lower half
-    final bool isUpperHalf = _random.nextBool();
-
-    // Make obstacles slightly smaller
-    final obstacleHeight = screenHeight * (_random.nextDouble() * 0.15 + 0.15);
+    // Create obstacle in a challenging location
+    final obstacleHeight = screenHeight * (_random.nextDouble() * 0.15 + 0.1);
 
     double obstacleY;
 
-    if (isUpperHalf) {
-      // Place in upper half (top quarter of screen)
-      obstacleY = _random.nextDouble() * (screenHeight * 0.25);
+    // Decide if obstacle should be in upper or lower part
+    bool isUpper = _random.nextBool();
+    if (isUpper) {
+      // Upper obstacle
+      obstacleY = screenHeight * 0.1;
     } else {
-      // Place in lower half (bottom quarter of screen)
-      obstacleY =
-          screenHeight * 0.75 +
-          (_random.nextDouble() * (screenHeight * 0.25 - obstacleHeight));
+      // Lower obstacle
+      obstacleY = screenHeight * 0.7;
     }
 
     // Width of obstacles
@@ -191,28 +235,57 @@ class _SquatGameState extends State<SquatGame>
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final ballX = screenWidth / 2 - _ballSize / 2;
-    final ballY = screenHeight * _ballPosition - _ballSize / 2;
+    final platformX = screenWidth / 4;
+    final platformY = screenHeight * _platformPosition;
 
     setState(() {
-      // Move obstacles very slowly
+      // Move coins
+      for (var i = _coins.length - 1; i >= 0; i--) {
+        _coins[i].x -= _gameSpeed;
+
+        // Remove coins that are off screen
+        if (_coins[i].x < -_coins[i].size) {
+          _coins.removeAt(i);
+          continue;
+        }
+
+        // Improved collision detection with platform - use center points
+        final coinCenterX = _coins[i].x + _coins[i].size / 2;
+        final coinCenterY = _coins[i].y + _coins[i].size / 2;
+        final platformCenterX = platformX + _platformWidth / 2;
+        final platformCenterY = platformY + _platformHeight / 2;
+
+        // Calculate distance between centers
+        final distance = sqrt(
+          pow(coinCenterX - platformCenterX, 2) +
+              pow(coinCenterY - platformCenterY, 2),
+        );
+
+        // If distance is less than sum of half widths, collision occurred
+        if (distance < (_coins[i].size / 2 + _platformWidth / 2)) {
+          // Coin collected
+          _score += 10;
+          _coins.removeAt(i);
+        }
+      }
+
+      // Move obstacles with improved collision detection
       for (var i = _obstacles.length - 1; i >= 0; i--) {
-        _obstacles[i].x -= _obstacleSpeed; // Reduced speed of obstacles
+        _obstacles[i].x -= _gameSpeed;
 
         // Remove obstacles that are off screen
         if (_obstacles[i].x < -_obstacles[i].width) {
           _obstacles.removeAt(i);
-          // Add point for passing obstacle
-          _score++;
           continue;
         }
 
-        // Check collision
-        if (_obstacles[i].x < ballX + _ballSize &&
-            _obstacles[i].x + _obstacles[i].width > ballX &&
-            _obstacles[i].y < ballY + _ballSize &&
-            _obstacles[i].y + _obstacles[i].height > ballY) {
+        // Better collision detection with buffer zone
+        if (_obstacles[i].x < platformX + _platformWidth &&
+            _obstacles[i].x + _obstacles[i].width > platformX &&
+            _obstacles[i].y < platformY + _platformHeight &&
+            _obstacles[i].y + _obstacles[i].height > platformY) {
           _gameOver = true;
+          // Play game over sound or vibration here if needed
           Future.delayed(Duration(seconds: 2), () {
             endGame();
           });
@@ -224,6 +297,7 @@ class _SquatGameState extends State<SquatGame>
 
   void endGame() {
     _gameActive = false;
+    _coinTimer?.cancel();
     _obstacleTimer?.cancel();
     _gameTimer?.cancel();
     widget.onGameComplete(_score);
@@ -231,8 +305,9 @@ class _SquatGameState extends State<SquatGame>
 
   @override
   void dispose() {
-    _ballController.dispose();
-    _squatSubscription.cancel();
+    _platformController.dispose();
+    _pushupSubscription.cancel();
+    _coinTimer?.cancel();
     _obstacleTimer?.cancel();
     _gameTimer?.cancel();
     super.dispose();
@@ -262,6 +337,8 @@ class _SquatGameState extends State<SquatGame>
                   widget.cameraController!.value.previewSize!.width,
                 ),
                 widget.poseResults!,
+                isFrontCamera:
+                    _currentLensDirection == CameraLensDirection.front,
               ),
             ),
           ),
@@ -275,34 +352,63 @@ class _SquatGameState extends State<SquatGame>
             height: obstacle.height,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.7),
-                border: Border.all(color: Colors.green, width: 2),
+                color: _themeColor.withOpacity(0.7),
+                border: Border.all(color: _themeColor, width: 2),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
         ),
 
-        // Ball
+        // Coins
+        ..._coins.map(
+          (coin) => Positioned(
+            left: coin.x,
+            top: coin.y,
+            width: coin.size,
+            height: coin.size,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.amber,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.orange[800]!, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.yellow.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(Icons.star, color: Colors.orange[800], size: 16),
+              ),
+            ),
+          ),
+        ),
+
+        // Platform (controlled by pushups)
         Positioned(
-          left: MediaQuery.of(context).size.width / 2 - _ballSize / 2,
+          left: MediaQuery.of(context).size.width / 4,
           top:
-              MediaQuery.of(context).size.height * _ballPosition -
-              _ballSize / 2,
+              MediaQuery.of(context).size.height * _platformPosition -
+              _platformHeight / 2,
+          width: _platformWidth,
+          height: _platformHeight,
           child: Container(
-            width: _ballSize,
-            height: _ballSize,
             decoration: BoxDecoration(
-              color: Colors.yellow,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.orange, width: 3),
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.blue.withOpacity(0.5),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
               ],
+            ),
+            child: Center(
+              child: Icon(Icons.fitness_center, color: Colors.white, size: 16),
             ),
           ),
         ),
@@ -314,7 +420,7 @@ class _SquatGameState extends State<SquatGame>
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.purple,
+              color: _themeColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -341,7 +447,7 @@ class _SquatGameState extends State<SquatGame>
             child: Container(
               padding: EdgeInsets.all(30),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.8),
+                color: _themeColor.withOpacity(0.8),
                 shape: BoxShape.circle,
               ),
               child: Text(
@@ -361,7 +467,7 @@ class _SquatGameState extends State<SquatGame>
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.8),
+                color: _themeColor.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -389,7 +495,7 @@ class _SquatGameState extends State<SquatGame>
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Text(
-                'Squat to move the ball up and down to avoid the green obstacles.',
+                'Do pushups to move the platform up and down. Collect coins and avoid obstacles!',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white, fontSize: 18),
               ),
@@ -405,7 +511,7 @@ class _SquatGameState extends State<SquatGame>
             child: ElevatedButton(
               onPressed: startGame,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple,
+                backgroundColor: _themeColor,
                 padding: EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -418,7 +524,7 @@ class _SquatGameState extends State<SquatGame>
             ),
           ),
 
-        // Back button when game is active or during countdown
+        // Back button
         Positioned(
           top: 40,
           left: 20,
@@ -434,8 +540,7 @@ class _SquatGameState extends State<SquatGame>
           left: 70,
           child: IconButton(
             icon: Icon(
-              widget.cameraController?.description.lensDirection ==
-                      CameraLensDirection.back
+              _currentLensDirection == CameraLensDirection.back
                   ? Icons.camera_front
                   : Icons.camera_rear,
               color: Colors.white,
@@ -447,6 +552,15 @@ class _SquatGameState extends State<SquatGame>
       ],
     );
   }
+}
+
+// Class to represent coins
+class Coin {
+  double x;
+  double y;
+  final double size;
+
+  Coin({required this.x, required this.y, required this.size});
 }
 
 // Class to represent obstacles

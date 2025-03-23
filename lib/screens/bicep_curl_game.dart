@@ -5,16 +5,16 @@ import 'package:camera/camera.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:gamifiedfitnessapp/pose_painter.dart';
 
-class SquatGame extends StatefulWidget {
-  final Stream<bool> isSquattingStream;
+class BicepCurlGame extends StatefulWidget {
+  final Stream<bool> isCurlingStream;
   final Function(int) onGameComplete;
   final CameraController? cameraController;
-  final List<Pose>? poseResults; // Add pose results to display body points
+  final List<Pose>? poseResults;
   final Function(CameraLensDirection) onCameraToggle;
 
-  const SquatGame({
+  const BicepCurlGame({
     Key? key,
-    required this.isSquattingStream,
+    required this.isCurlingStream,
     required this.onGameComplete,
     this.cameraController,
     this.poseResults,
@@ -22,16 +22,16 @@ class SquatGame extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _SquatGameState createState() => _SquatGameState();
+  _BicepCurlGameState createState() => _BicepCurlGameState();
 }
 
-class _SquatGameState extends State<SquatGame>
+class _BicepCurlGameState extends State<BicepCurlGame>
     with SingleTickerProviderStateMixin {
-  late AnimationController _ballController;
-  double _ballPosition = 0.5; // 0 is top, 1 is bottom
+  late AnimationController _weightController;
+  double _weightPosition = 0.5; // 0 is top, 1 is bottom
   double _targetPosition = 0.5;
   int _score = 0;
-  late StreamSubscription _squatSubscription;
+  late StreamSubscription _curlSubscription;
   bool _gameActive = false;
   final List<Obstacle> _obstacles = [];
   Timer? _gameTimer;
@@ -41,42 +41,54 @@ class _SquatGameState extends State<SquatGame>
   int _countdownValue = 3; // Countdown timer starting value
   bool _isCountingDown = false;
 
-  // Ball properties
-  final double _ballSize = 50;
+  // Camera direction tracking
+  CameraLensDirection _currentLensDirection = CameraLensDirection.back;
 
-  // Reduced obstacle speed significantly
-  final double _obstacleSpeed = 1.5; // Very slow speed for obstacles
+  // Weight properties
+  final double _weightSize = 50;
+
+  // Obstacle speed
+  final double _obstacleSpeed = 1.5;
+
+  // Theme color
+  final Color _themeColor = Colors.indigo;
 
   @override
   void initState() {
     super.initState();
 
-    // Create animation controller for smooth ball movement
-    _ballController = AnimationController(
+    // Get initial camera direction if available
+    if (widget.cameraController != null) {
+      _currentLensDirection =
+          widget.cameraController!.description.lensDirection;
+    }
+
+    // Create animation controller for smooth weight movement
+    _weightController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 300),
     )..addListener(() {
       setState(() {
-        // Update ball position based on animation
-        _ballPosition = _ballController.value;
+        // Update weight position based on animation
+        _weightPosition = _weightController.value;
       });
     });
 
-    // Listen to squatting state changes
-    _squatSubscription = widget.isSquattingStream.listen((isSquatting) {
+    // Listen to curling state changes
+    _curlSubscription = widget.isCurlingStream.listen((isCurling) {
       if (!_gameActive) return;
 
-      // Set target position based on squatting state
-      if (isSquatting) {
-        // Move ball up when squatting
+      // Set target position based on curling state
+      if (isCurling) {
+        // Move weight up when curling
         _targetPosition = 0.2;
       } else {
-        // Move ball down when standing
+        // Move weight down when not curling
         _targetPosition = 0.8;
       }
 
       // Start animation to target position
-      _ballController.animateTo(
+      _weightController.animateTo(
         _targetPosition,
         curve: Curves.easeOut,
         duration: Duration(milliseconds: 300),
@@ -85,12 +97,17 @@ class _SquatGameState extends State<SquatGame>
   }
 
   void _toggleCamera() {
+    // Toggle between front and back cameras
     CameraLensDirection newDirection =
-        widget.cameraController?.description.lensDirection ==
-                CameraLensDirection.back
+        _currentLensDirection == CameraLensDirection.back
             ? CameraLensDirection.front
             : CameraLensDirection.back;
 
+    setState(() {
+      _currentLensDirection = newDirection;
+    });
+
+    // Call the parent's camera toggle function
     widget.onCameraToggle(newDirection);
   }
 
@@ -128,7 +145,7 @@ class _SquatGameState extends State<SquatGame>
       _gameActive = true;
     });
 
-    // Create obstacles periodically (less frequently)
+    // Create obstacles periodically
     _obstacleTimer = Timer.periodic(Duration(milliseconds: 3000), (timer) {
       if (!mounted || !_gameActive) {
         timer.cancel();
@@ -191,13 +208,13 @@ class _SquatGameState extends State<SquatGame>
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final ballX = screenWidth / 2 - _ballSize / 2;
-    final ballY = screenHeight * _ballPosition - _ballSize / 2;
+    final weightX = screenWidth / 2 - _weightSize / 2;
+    final weightY = screenHeight * _weightPosition - _weightSize / 2;
 
     setState(() {
-      // Move obstacles very slowly
+      // Move obstacles
       for (var i = _obstacles.length - 1; i >= 0; i--) {
-        _obstacles[i].x -= _obstacleSpeed; // Reduced speed of obstacles
+        _obstacles[i].x -= _obstacleSpeed;
 
         // Remove obstacles that are off screen
         if (_obstacles[i].x < -_obstacles[i].width) {
@@ -208,10 +225,10 @@ class _SquatGameState extends State<SquatGame>
         }
 
         // Check collision
-        if (_obstacles[i].x < ballX + _ballSize &&
-            _obstacles[i].x + _obstacles[i].width > ballX &&
-            _obstacles[i].y < ballY + _ballSize &&
-            _obstacles[i].y + _obstacles[i].height > ballY) {
+        if (_obstacles[i].x < weightX + _weightSize &&
+            _obstacles[i].x + _obstacles[i].width > weightX &&
+            _obstacles[i].y < weightY + _weightSize &&
+            _obstacles[i].y + _obstacles[i].height > weightY) {
           _gameOver = true;
           Future.delayed(Duration(seconds: 2), () {
             endGame();
@@ -231,8 +248,8 @@ class _SquatGameState extends State<SquatGame>
 
   @override
   void dispose() {
-    _ballController.dispose();
-    _squatSubscription.cancel();
+    _weightController.dispose();
+    _curlSubscription.cancel();
     _obstacleTimer?.cancel();
     _gameTimer?.cancel();
     super.dispose();
@@ -275,25 +292,25 @@ class _SquatGameState extends State<SquatGame>
             height: obstacle.height,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.7),
-                border: Border.all(color: Colors.green, width: 2),
+                color: _themeColor.withOpacity(0.7),
+                border: Border.all(color: _themeColor, width: 2),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
         ),
 
-        // Ball
+        // Weight (dumbbell)
         Positioned(
-          left: MediaQuery.of(context).size.width / 2 - _ballSize / 2,
+          left: MediaQuery.of(context).size.width / 2 - _weightSize / 2,
           top:
-              MediaQuery.of(context).size.height * _ballPosition -
-              _ballSize / 2,
+              MediaQuery.of(context).size.height * _weightPosition -
+              _weightSize / 2,
           child: Container(
-            width: _ballSize,
-            height: _ballSize,
+            width: _weightSize,
+            height: _weightSize,
             decoration: BoxDecoration(
-              color: Colors.yellow,
+              color: Colors.amber,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.orange, width: 3),
               boxShadow: [
@@ -303,6 +320,13 @@ class _SquatGameState extends State<SquatGame>
                   spreadRadius: 2,
                 ),
               ],
+            ),
+            child: Center(
+              child: Icon(
+                Icons.fitness_center,
+                color: Colors.orange[800],
+                size: 26,
+              ),
             ),
           ),
         ),
@@ -314,7 +338,7 @@ class _SquatGameState extends State<SquatGame>
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.purple,
+              color: _themeColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -341,7 +365,7 @@ class _SquatGameState extends State<SquatGame>
             child: Container(
               padding: EdgeInsets.all(30),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.8),
+                color: _themeColor.withOpacity(0.8),
                 shape: BoxShape.circle,
               ),
               child: Text(
@@ -361,7 +385,7 @@ class _SquatGameState extends State<SquatGame>
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.8),
+                color: _themeColor.withOpacity(0.8),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -389,7 +413,7 @@ class _SquatGameState extends State<SquatGame>
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Text(
-                'Squat to move the ball up and down to avoid the green obstacles.',
+                'Do bicep curls to move the weight up and down to avoid the obstacles.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white, fontSize: 18),
               ),
@@ -405,7 +429,7 @@ class _SquatGameState extends State<SquatGame>
             child: ElevatedButton(
               onPressed: startGame,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple,
+                backgroundColor: _themeColor,
                 padding: EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -418,7 +442,7 @@ class _SquatGameState extends State<SquatGame>
             ),
           ),
 
-        // Back button when game is active or during countdown
+        // Back button
         Positioned(
           top: 40,
           left: 20,
@@ -434,8 +458,7 @@ class _SquatGameState extends State<SquatGame>
           left: 70,
           child: IconButton(
             icon: Icon(
-              widget.cameraController?.description.lensDirection ==
-                      CameraLensDirection.back
+              _currentLensDirection == CameraLensDirection.back
                   ? Icons.camera_front
                   : Icons.camera_rear,
               color: Colors.white,
