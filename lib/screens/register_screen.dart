@@ -12,7 +12,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController(); // Added phone number field
+  final _phoneController = TextEditingController();
+  final _ageController = TextEditingController(); // ✅ ADDED
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
@@ -22,7 +23,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose(); // Dispose phone number field
+    _phoneController.dispose();
+    _ageController.dispose(); // ✅ ADDED
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -36,11 +38,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       final authService = Provider.of<AuthService>(context, listen: false);
+
       final error = await authService.registerWithEmail(
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
-        _phoneController.text.trim(), // Pass phone number
+        _phoneController.text.trim(),
+        int.tryParse(_ageController.text.trim()) ?? 0, // ✅ ADDED
       );
 
       setState(() {
@@ -128,6 +132,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     }
                     if (!RegExp(r'^\+?[1-9]\d{9,14}$').hasMatch(value)) {
                       return 'Enter a valid phone number with country code';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _ageController,
+                  decoration: InputDecoration(
+                    labelText: 'Age',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.cake),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your age';
+                    }
+                    final age = int.tryParse(value);
+                    if (age == null || age < 5 || age > 120) {
+                      return 'Please enter a valid age';
                     }
                     return null;
                   },

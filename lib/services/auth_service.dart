@@ -57,26 +57,26 @@ class AuthService extends ChangeNotifier {
     String email,
     String password,
     String name,
-    String phoneNumber,
+    String phone,
+    int age,
   ) async {
     try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
+      final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      await _firestore.collection('users').doc(result.user!.uid).set({
-        'name': name,
+      await _firestore.collection('users').doc(credential.user!.uid).set({
+        'uid': credential.user!.uid,
         'email': email,
-        'phone': phoneNumber, // Store phone number
-        'role': 'user', // Default role
-        'createdAt': Timestamp.now(),
-        'points': 0,
-        'badges': [],
-        'workouts': [],
+        'name': name,
+        'phone': phone,
+        'age': age,
+        'level': 'Beginner', // 👈 initial level
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
-      return null;
+      return null; // success
     } on FirebaseAuthException catch (e) {
       return e.message;
     }

@@ -277,12 +277,32 @@ class _BicepCurlGameState extends State<BicepCurlGame>
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
+
+        final combinedDoc =
+            await leaderboardCollection.doc('combined_$uid').get();
+        final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
+
+        // 🧠 Map score to level string
+        final levelName = determineLevel(combinedScore);
+
+        // ✅ Update level in 'users' collection with name
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'level': levelName,
+        }, SetOptions(merge: true));
       }
     } catch (e) {
       print("Error saving score to leaderboard: $e");
     }
 
     widget.onGameComplete(_score);
+  }
+
+  String determineLevel(int score) {
+    if (score < 200) return 'Beginner';
+    if (score < 400) return 'Intermediate';
+    if (score < 600) return 'Advanced';
+    if (score < 1000) return 'Pro';
+    return 'Elite';
   }
 
   @override

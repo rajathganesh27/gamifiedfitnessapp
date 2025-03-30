@@ -13,12 +13,18 @@ class ProfileCompletionScreen extends StatefulWidget {
 class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _ageController = TextEditingController();
+  final _emailController = TextEditingController();
+
   bool _isLoading = false;
   String? _errorMessage;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _ageController.dispose();
+    _emailController.dispose();
+
     super.dispose();
   }
 
@@ -34,28 +40,33 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
       if (user != null) {
         try {
-          DocumentReference userRef = FirebaseFirestore.instance
+          final uid = user.uid;
+          final userRef = FirebaseFirestore.instance
               .collection('users')
-              .doc(user.uid);
-          DocumentSnapshot userDoc = await userRef.get();
+              .doc(uid);
+          final userDoc = await userRef.get();
+
+          final name = _nameController.text.trim();
+          final email = _emailController.text.trim();
+          final age = int.tryParse(_ageController.text.trim()) ?? 0;
+
+          final updateData = {
+            'uid': uid,
+            'name': name,
+            'age': age,
+            'email': email,
+            'profileCompleted': true,
+          };
 
           if (userDoc.exists) {
-            // Update the existing user document
-            await userRef.update({
-              'name': _nameController.text.trim(),
-              'profileCompleted': true, // Marks profile as complete
-            });
+            await userRef.update(updateData);
           } else {
-            // Create a new document in case of an issue
+            // ✅ Create document with all fields
             await userRef.set({
-              'name': _nameController.text.trim(),
-              'phone': user.phoneNumber ?? "",
-              'email': user.email ?? "",
+              ...updateData,
+              'phone': user.phoneNumber ?? '',
+              'level': 'Beginner',
               'createdAt': Timestamp.now(),
-              'points': 0,
-              'badges': [],
-              'workouts': [],
-              'profileCompleted': true,
             });
           }
 
@@ -63,7 +74,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             _isLoading = false;
           });
 
-          // Navigate to the user dashboard
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => UserDashboard()),
@@ -125,7 +135,50 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     return null;
                   },
                 ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _ageController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Age',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.cake),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your age';
+                    }
+                    final age = int.tryParse(value);
+                    if (age == null || age < 5 || age > 120) {
+                      return 'Enter a valid age';
+                    }
+                    return null;
+                  },
+                ),
                 SizedBox(height: 24),
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.email),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    final emailRegex = RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    );
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Enter a valid email address';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+
                 if (_errorMessage != null)
                   Padding(
                     padding: EdgeInsets.only(bottom: 16),

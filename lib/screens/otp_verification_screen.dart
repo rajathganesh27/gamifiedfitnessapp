@@ -75,12 +75,14 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 .collection('users')
                 .doc(user.uid)
                 .set({
-                  'phone': user.phoneNumber,
-                  'role': 'user',
+                  'uid': user.uid,
+                  'phone': user.phoneNumber ?? '',
+                  'email': user.email ?? '',
+                  'name': '',
+                  'age': 0,
+                  'level': 'Beginner',
                   'createdAt': Timestamp.now(),
-                  'points': 0,
-                  'badges': [],
-                  'workouts': [],
+                  'profileCompleted': false, // ✅ Add this
                 });
 
             Navigator.pushReplacement(
