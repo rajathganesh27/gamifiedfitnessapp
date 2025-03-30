@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:gamifiedfitnessapp/pose_painter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PushUpGame extends StatefulWidget {
   final Stream<bool> isLoweredStream;
@@ -264,7 +266,7 @@ class _PushUpGameState extends State<PushUpGame>
         // If distance is less than sum of half widths, collision occurred
         if (distance < (_coins[i].size / 2 + _platformWidth / 2)) {
           // Coin collected
-          _score += 10;
+          _score += 1;
           _coins.removeAt(i);
         }
       }
@@ -295,11 +297,48 @@ class _PushUpGameState extends State<PushUpGame>
     });
   }
 
-  void endGame() {
+  void endGame() async {
     _gameActive = false;
     _coinTimer?.cancel();
     _obstacleTimer?.cancel();
     _gameTimer?.cancel();
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final uid = user.uid;
+
+        // 🔄 Fetch name from 'users' collection
+        final userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final displayName = userDoc.data()?['name'] ?? 'Anonymous';
+
+        final leaderboardCollection = FirebaseFirestore.instance.collection(
+          'leaderboard',
+        );
+
+        // ✅ 1. Save to exercise-specific leaderboard (push_up)
+        await leaderboardCollection.doc('push_up_$uid').set({
+          'uid': uid,
+          'name': displayName,
+          'exercise': 'push_up',
+          'score': FieldValue.increment(_score),
+          'timestamp': Timestamp.now(),
+        }, SetOptions(merge: true));
+
+        // ✅ 2. Also update combined leaderboard
+        await leaderboardCollection.doc('combined_$uid').set({
+          'uid': uid,
+          'name': displayName,
+          'exercise': 'combined',
+          'score': FieldValue.increment(_score),
+          'timestamp': Timestamp.now(),
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      print("Error saving score to leaderboard: $e");
+    }
+
     widget.onGameComplete(_score);
   }
 

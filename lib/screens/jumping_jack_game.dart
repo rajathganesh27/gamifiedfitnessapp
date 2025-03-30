@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:gamifiedfitnessapp/pose_painter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class JumpingJackGame extends StatefulWidget {
   final Stream<Map<PoseLandmarkType, PoseLandmark>> landmarksStream;
@@ -272,7 +274,7 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
     });
   }
 
-  void _endGame() {
+  void _endGame() async {
     setState(() {
       _gameActive = false;
       _gameOver = true;
@@ -280,6 +282,42 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
 
     _effectsTimer?.cancel();
     _effectsTimer = null;
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final uid = user.uid;
+
+        // 🔄 Fetch display name from 'users' collection
+        final userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final displayName = userDoc.data()?['name'] ?? 'Anonymous';
+
+        final leaderboardCollection = FirebaseFirestore.instance.collection(
+          'leaderboard',
+        );
+
+        // ✅ Write to jumping_jack leaderboard
+        await leaderboardCollection.doc('jumping_jack_$uid').set({
+          'uid': uid,
+          'name': displayName,
+          'exercise': 'jumping_jack',
+          'score': FieldValue.increment(_score),
+          'timestamp': Timestamp.now(),
+        }, SetOptions(merge: true));
+
+        // ✅ Also update combined leaderboard
+        await leaderboardCollection.doc('combined_$uid').set({
+          'uid': uid,
+          'name': displayName,
+          'exercise': 'combined',
+          'score': FieldValue.increment(_score),
+          'timestamp': Timestamp.now(),
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      print("Error saving score to leaderboard: $e");
+    }
 
     widget.onGameComplete(_score);
   }
