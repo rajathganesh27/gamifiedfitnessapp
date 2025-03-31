@@ -74,15 +74,36 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'FitQuest',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    color: Color.fromARGB(255, 3, 54, 86),
+                  ),
                 ),
                 SizedBox(height: 40),
+
+                // Email Text Field
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
                     labelText: 'Email',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        8.0,
+                      ), // Rounded Borders
+                    ),
                     prefixIcon: Icon(Icons.email),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(
+                        color: Color(0xFF2196F3),
+                        width: 2.0,
+                      ), // Blue when focused
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -98,12 +119,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 SizedBox(height: 16),
+
+                // Password Text Field
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        8.0,
+                      ), // Rounded Borders
+                    ),
                     prefixIcon: Icon(Icons.lock),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(
+                        color: Color(0xFF2196F3),
+                        width: 2.0,
+                      ), // Blue when focused
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: Colors.grey),
+                    ),
                   ),
                   obscureText: true,
                   validator: (value) {
@@ -117,6 +155,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 SizedBox(height: 24),
+
+                // Error Message
                 if (_errorMessage != null)
                   Padding(
                     padding: EdgeInsets.only(bottom: 16),
@@ -126,6 +166,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ),
+
+                // Login with Email Button
                 ElevatedButton(
                   onPressed: _isLoading ? null : _login,
                   child:
@@ -138,9 +180,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           : Text('Login with Email'),
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: const Color(0xFF2196F3),
                   ),
                 ),
                 SizedBox(height: 16),
+
+                // Login with Phone Button
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -153,10 +198,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text('Login with Phone Number'),
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.green,
+                    backgroundColor: const Color(0xFF2196F3),
                   ),
                 ),
                 SizedBox(height: 16),
+
+                // Register Now Button
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -164,7 +211,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       MaterialPageRoute(builder: (context) => RegisterScreen()),
                     );
                   },
-                  child: Text("Don't have an account? Register now"),
+                  child: Text(
+                    "Don't have an account? Register now",
+                    style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+                  ),
                 ),
               ],
             ),

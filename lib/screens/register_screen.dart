@@ -73,6 +73,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  InputDecoration _inputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+      prefixIcon: Icon(icon),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.0),
+        borderSide: BorderSide(
+          color: Color(0xFF2196F3),
+          width: 2.0,
+        ), // Blue when focused
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.0),
+        borderSide: BorderSide(color: Colors.grey), 
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,160 +110,124 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 20),
+
                 TextFormField(
                   controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Full Name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    return null;
-                  },
+                  decoration: _inputDecoration('Full Name', Icons.person),
+                  validator:
+                      (value) =>
+                          value == null || value.isEmpty
+                              ? 'Please enter your name'
+                              : null,
                 ),
                 SizedBox(height: 16),
+
                 TextFormField(
                   controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
+                  decoration: _inputDecoration('Email', Icons.email),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your email';
-                    }
                     if (!RegExp(
                       r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                    ).hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
+                    ).hasMatch(value))
+                      return 'Enter a valid email';
                     return null;
                   },
                 ),
                 SizedBox(height: 16),
+
                 TextFormField(
                   controller: _phoneController,
-                  decoration: InputDecoration(
-                    labelText: 'Phone Number',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.phone),
-                  ),
+                  decoration: _inputDecoration('Phone Number', Icons.phone),
                   keyboardType: TextInputType.phone,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your phone number';
-                    }
-                    if (!RegExp(r'^\+?[1-9]\d{9,14}$').hasMatch(value)) {
-                      return 'Enter a valid phone number with country code';
-                    }
+                    if (!RegExp(r'^\+?[1-9]\d{9,14}$').hasMatch(value))
+                      return 'Enter a valid phone number';
                     return null;
                   },
                 ),
                 SizedBox(height: 16),
+
                 TextFormField(
                   controller: _ageController,
-                  decoration: InputDecoration(
-                    labelText: 'Age',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.cake),
-                  ),
+                  decoration: _inputDecoration('Age', Icons.cake),
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your age';
-                    }
                     final age = int.tryParse(value);
-                    if (age == null || age < 5 || age > 120) {
+                    if (age == null || age < 5 || age > 120)
                       return 'Please enter a valid age';
-                    }
                     return null;
                   },
                 ),
                 SizedBox(height: 16),
+
                 TextFormField(
                   controller: _heightController,
-                  decoration: InputDecoration(
-                    labelText: 'Height (in cm)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.height),
-                  ),
+                  decoration: _inputDecoration('Height (in cm)', Icons.height),
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your height';
-                    }
                     final height = double.tryParse(value);
-                    if (height == null || height < 50 || height > 250) {
-                      return 'Please enter a valid height in cm';
-                    }
+                    if (height == null || height < 50 || height > 250)
+                      return 'Enter a valid height';
                     return null;
                   },
                 ),
                 SizedBox(height: 16),
+
                 TextFormField(
                   controller: _weightController,
-                  decoration: InputDecoration(
-                    labelText: 'Weight (in kg)',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.monitor_weight),
+                  decoration: _inputDecoration(
+                    'Weight (in kg)',
+                    Icons.monitor_weight,
                   ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter your weight';
-                    }
                     final weight = double.tryParse(value);
-                    if (weight == null || weight < 20 || weight > 300) {
-                      return 'Please enter a valid weight in kg';
-                    }
+                    if (weight == null || weight < 20 || weight > 300)
+                      return 'Enter a valid weight';
                     return null;
                   },
                 ),
-
                 SizedBox(height: 16),
+
                 TextFormField(
                   controller: _passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
-                  ),
+                  decoration: _inputDecoration('Password', Icons.lock),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
+                    if (value.length < 6)
                       return 'Password must be at least 6 characters';
-                    }
                     return null;
                   },
                 ),
                 SizedBox(height: 16),
+
                 TextFormField(
                   controller: _confirmPasswordController,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock),
-                  ),
+                  decoration: _inputDecoration('Confirm Password', Icons.lock),
                   obscureText: true,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.isEmpty)
                       return 'Please confirm your password';
-                    }
-                    if (value != _passwordController.text) {
+                    if (value != _passwordController.text)
                       return 'Passwords do not match';
-                    }
                     return null;
                   },
                 ),
                 SizedBox(height: 24),
+
                 if (_errorMessage != null)
                   Padding(
                     padding: EdgeInsets.only(bottom: 16),
@@ -254,6 +237,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       textAlign: TextAlign.center,
                     ),
                   ),
+
                 ElevatedButton(
                   onPressed: _isLoading ? null : _register,
                   child:
@@ -266,6 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           : Text('Register'),
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Color(0xFF2196F3), // Changed button color
                   ),
                 ),
               ],
