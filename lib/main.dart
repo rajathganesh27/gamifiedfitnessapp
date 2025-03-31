@@ -22,23 +22,36 @@ class MyApp extends StatelessWidget {
       builder: (context, authService, _) {
         return MaterialApp(
           title: 'FitQuest',
-          debugShowCheckedModeBanner: false, // 🔥 Remove Debug Banner
+          debugShowCheckedModeBanner: false,
           theme: ThemeData(
-            brightness: Brightness.dark, // 🌙 Dark Theme
-            primarySwatch: Colors.purple, // 🎨 Primary color
-            scaffoldBackgroundColor: Color(0xFF0E0E12), // 🖤 Dark background
+            brightness: Brightness.light,
+            primaryColor: Colors.green,
+            scaffoldBackgroundColor: Colors.white,
+            appBarTheme: AppBarTheme(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              iconTheme: IconThemeData(color: Colors.black87),
+              titleTextStyle: GoogleFonts.poppins(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             textTheme: GoogleFonts.poppinsTextTheme(
-              // 🔥 Modern Font
               Theme.of(context).textTheme.apply(
-                bodyColor: Colors.white,
-                displayColor: Colors.white,
+                bodyColor: Colors.black87,
+                displayColor: Colors.black87,
               ),
             ),
             elevatedButtonTheme: ElevatedButtonThemeData(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFFFD700), // 🟡 Yellow for buttons
-                foregroundColor: Colors.black,
-                textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                textStyle: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -46,15 +59,51 @@ class MyApp extends StatelessWidget {
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-                textStyle: TextStyle(fontSize: 16),
+                foregroundColor: Colors.green,
+                textStyle: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
+            outlinedButtonTheme: OutlinedButtonThemeData(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.black87,
+                side: BorderSide(color: Colors.grey.shade300),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.green, width: 2),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.red, width: 1),
+              ),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
           ),
-          home:
-              authService.user == null
-                  ? LoginScreen()
-                  : authService.isAdmin
+          home: authService.user == null
+              ? LoginScreen()
+              : authService.isAdmin
                   ? AdminDashboard()
                   : UserDashboard(),
         );
