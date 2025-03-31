@@ -239,43 +239,43 @@ class _SquatGameState extends State<SquatGame>
 
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
-        final leaderboardCollection = FirebaseFirestore.instance.collection(
-          'leaderboard',
+        final squatsCollection = FirebaseFirestore.instance.collection(
+          'squats',
+        );
+        final combinedCollection = FirebaseFirestore.instance.collection(
+          'combined_scores',
         );
 
-        // ✅ Update bicep_curl leaderboard
-        await leaderboardCollection.doc('bicep_curl_$uid').set({
+        // ✅ Save squat score
+        await squatsCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'bicep_curl',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Update combined leaderboard
-        await leaderboardCollection.doc('combined_$uid').set({
+        // ✅ Update combined score
+        await combinedCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'combined',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Fetch updated combined score
-        final combinedDoc =
-            await leaderboardCollection.doc('combined_$uid').get();
+        // ✅ Fetch combined score
+        final combinedDoc = await combinedCollection.doc(uid).get();
         final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
 
-        // ✅ Map score to level label
+        // ✅ Determine new level
         final newLevelLabel = _getLevelLabel(combinedScore);
 
-        // ✅ Save level label to users collection
+        // ✅ Update level in 'users'
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'level': newLevelLabel,
         }, SetOptions(merge: true));
       }
     } catch (e) {
-      print("Error saving score to leaderboard: $e");
+      print("Error saving squat score: $e");
     }
 
     widget.onGameComplete(_score);
