@@ -12,9 +12,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController(); // Added phone number field
+  final _phoneController = TextEditingController();
+  final _ageController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _heightController = TextEditingController();
+  final _weightController = TextEditingController();
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -22,9 +26,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose(); // Dispose phone number field
+    _phoneController.dispose();
+    _ageController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
     super.dispose();
   }
 
@@ -36,11 +43,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
 
       final authService = Provider.of<AuthService>(context, listen: false);
+      final height = double.tryParse(_heightController.text.trim()) ?? 0;
+      final weight = double.tryParse(_weightController.text.trim()) ?? 0;
+
       final error = await authService.registerWithEmail(
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
-        _phoneController.text.trim(), // Pass phone number
+        _phoneController.text.trim(),
+        int.tryParse(_ageController.text.trim()) ?? 0,
+        height,
+        weight,
       );
 
       setState(() {
@@ -132,6 +145,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return null;
                   },
                 ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _ageController,
+                  decoration: InputDecoration(
+                    labelText: 'Age',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.cake),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your age';
+                    }
+                    final age = int.tryParse(value);
+                    if (age == null || age < 5 || age > 120) {
+                      return 'Please enter a valid age';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _heightController,
+                  decoration: InputDecoration(
+                    labelText: 'Height (in cm)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.height),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your height';
+                    }
+                    final height = double.tryParse(value);
+                    if (height == null || height < 50 || height > 250) {
+                      return 'Please enter a valid height in cm';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _weightController,
+                  decoration: InputDecoration(
+                    labelText: 'Weight (in kg)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.monitor_weight),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your weight';
+                    }
+                    final weight = double.tryParse(value);
+                    if (weight == null || weight < 20 || weight > 300) {
+                      return 'Please enter a valid weight in kg';
+                    }
+                    return null;
+                  },
+                ),
+
                 SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,

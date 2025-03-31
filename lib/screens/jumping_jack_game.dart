@@ -293,26 +293,36 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
-        final leaderboardCollection = FirebaseFirestore.instance.collection(
-          'leaderboard',
+        // ✅ Separate collection for Jumping Jack
+        final jumpingJackCollection = FirebaseFirestore.instance.collection(
+          'jumping_jacks',
         );
-
-        // ✅ Write to jumping_jack leaderboard
-        await leaderboardCollection.doc('jumping_jack_$uid').set({
+        await jumpingJackCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'jumping_jack',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Also update combined leaderboard
-        await leaderboardCollection.doc('combined_$uid').set({
+        // ✅ Separate collection for Combined Scores
+        final combinedCollection = FirebaseFirestore.instance.collection(
+          'combined_scores',
+        );
+        await combinedCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'combined',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
+        }, SetOptions(merge: true));
+
+        // 🔄 Fetch updated combined score
+        final combinedDoc = await combinedCollection.doc(uid).get();
+        final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
+
+        // ✅ Update level
+        final levelName = determineLevel(combinedScore);
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'level': levelName,
         }, SetOptions(merge: true));
       }
     } catch (e) {
@@ -320,6 +330,14 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
     }
 
     widget.onGameComplete(_score);
+  }
+
+  String determineLevel(int score) {
+    if (score < 200) return 'Beginner';
+    if (score < 400) return 'Intermediate';
+    if (score < 600) return 'Advanced';
+    if (score < 1000) return 'Pro';
+    return 'Elite';
   }
 
   @override

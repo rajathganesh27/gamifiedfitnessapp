@@ -57,11 +57,11 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                   .collection('users')
                   .doc(result.user!.uid)
                   .set({
+                    'uid': result.user!.uid,
                     'phone': result.user!.phoneNumber,
                     'createdAt': Timestamp.now(),
-                    'points': 0,
-                    'badges': [],
-                    'workouts': [],
+                    'level': 'Beginner',
+                    'profileCompleted': false,
                   });
             }
 

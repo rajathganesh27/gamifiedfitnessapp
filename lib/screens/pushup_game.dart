@@ -308,38 +308,60 @@ class _PushUpGameState extends State<PushUpGame>
       if (user != null) {
         final uid = user.uid;
 
-        // 🔄 Fetch name from 'users' collection
+        // 🔄 Fetch user display name
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
-        final leaderboardCollection = FirebaseFirestore.instance.collection(
-          'leaderboard',
+        // ✅ Use separate collections
+        final pushUpCollection = FirebaseFirestore.instance.collection(
+          'push_ups',
+        );
+        final combinedCollection = FirebaseFirestore.instance.collection(
+          'combined_scores',
         );
 
-        // ✅ 1. Save to exercise-specific leaderboard (push_up)
-        await leaderboardCollection.doc('push_up_$uid').set({
+        // ✅ 1. Save push-up score
+        await pushUpCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'push_up',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ 2. Also update combined leaderboard
-        await leaderboardCollection.doc('combined_$uid').set({
+        // ✅ 2. Update combined score
+        await combinedCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'combined',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
+        }, SetOptions(merge: true));
+
+        // 🔁 Fetch combined score for level update
+        final combinedDoc = await combinedCollection.doc(uid).get();
+        final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
+
+        // 🧠 Determine level
+        final levelName = determineLevel(combinedScore);
+
+        // ✅ Update user level
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'level': levelName,
         }, SetOptions(merge: true));
       }
     } catch (e) {
-      print("Error saving score to leaderboard: $e");
+      print("Error saving push-up score: $e");
     }
 
     widget.onGameComplete(_score);
+  }
+
+  String determineLevel(int score) {
+    if (score < 200) return 'Beginner';
+    if (score < 400) return 'Intermediate';
+    if (score < 600) return 'Advanced';
+    if (score < 1000) return 'Pro';
+    return 'Elite';
   }
 
   @override

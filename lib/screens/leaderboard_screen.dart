@@ -11,13 +11,29 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   final currentUser = FirebaseAuth.instance.currentUser;
 
   String _selectedExercise = 'combined'; // default
-  final List<String> _exercises = [
-    'combined',
-    'jumping_jack',
-    'squat',
-    'push_up',
-    'bicep_curl',
-  ];
+  final Map<String, String> _exerciseLabels = {
+    'combined': 'Total Score',
+    'jumping_jack': 'Jumping Jacks',
+    'squat': 'Squats',
+    'push_up': 'Push Ups',
+    'bicep_curl': 'Bicep Curls',
+  };
+
+  String getCollectionName(String exercise) {
+    switch (exercise) {
+      case 'jumping_jack':
+        return 'jumping_jacks';
+      case 'squat':
+        return 'squats';
+      case 'push_up':
+        return 'push_ups';
+      case 'bicep_curl':
+        return 'bicep_curls';
+      case 'combined':
+      default:
+        return 'combined_scores';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +43,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const BackButton(color: Colors.white),
-        title: const Text("Leaderboard"),
+        title: const Text("Leaderboard", style: TextStyle(color: Colors.white)),
       ),
       body: Column(
         children: [
@@ -47,11 +63,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
               value: _selectedExercise,
               items:
-                  _exercises.map((exercise) {
+                  _exerciseLabels.entries.map((entry) {
                     return DropdownMenuItem<String>(
-                      value: exercise,
+                      value: entry.key,
                       child: Text(
-                        exercise.replaceAll("_", " ").toUpperCase(),
+                        entry.value,
                         style: const TextStyle(color: Colors.white),
                       ),
                     );
@@ -71,8 +87,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream:
                   FirebaseFirestore.instance
-                      .collection('leaderboard')
-                      .where('exercise', isEqualTo: _selectedExercise)
+                      .collection(getCollectionName(_selectedExercise))
                       .orderBy('score', descending: true)
                       .snapshots(),
               builder: (context, snapshot) {
@@ -108,7 +123,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         'rank': index + 1,
                         'uid': doc['uid'],
                         'name':
-                            doc['name']?.toString().trim().isNotEmpty == true
+                            (doc['name']?.toString().trim().isNotEmpty ?? false)
                                 ? doc['name']
                                 : 'Anonymous',
                         'score': doc['score'] ?? 0,

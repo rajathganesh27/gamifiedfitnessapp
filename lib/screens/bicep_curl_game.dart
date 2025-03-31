@@ -256,26 +256,39 @@ class _BicepCurlGameState extends State<BicepCurlGame>
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
-        final leaderboardCollection = FirebaseFirestore.instance.collection(
-          'leaderboard',
+        final bicepCurlCollection = FirebaseFirestore.instance.collection(
+          'bicep_curls',
+        );
+        final combinedCollection = FirebaseFirestore.instance.collection(
+          'combined_scores',
         );
 
-        // ✅ Write to bicep_curl leaderboard
-        await leaderboardCollection.doc('bicep_curl_$uid').set({
+        // ✅ Write to bicep_curls collection (score per game)
+        await bicepCurlCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'bicep_curl',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Also update combined leaderboard
-        await leaderboardCollection.doc('combined_$uid').set({
+        // ✅ Update combined score
+        await combinedCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
-          'exercise': 'combined',
           'score': FieldValue.increment(_score),
           'timestamp': Timestamp.now(),
+        }, SetOptions(merge: true));
+
+        // ✅ Fetch updated combined score
+        final combinedDoc = await combinedCollection.doc(uid).get();
+        final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
+
+        // 🧠 Update level based on combined score
+        final levelName = determineLevel(combinedScore);
+
+        // ✅ Update user's level in users collection
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'level': levelName,
         }, SetOptions(merge: true));
       }
     } catch (e) {
@@ -283,6 +296,14 @@ class _BicepCurlGameState extends State<BicepCurlGame>
     }
 
     widget.onGameComplete(_score);
+  }
+
+  String determineLevel(int score) {
+    if (score < 200) return 'Beginner';
+    if (score < 400) return 'Intermediate';
+    if (score < 600) return 'Advanced';
+    if (score < 1000) return 'Pro';
+    return 'Elite';
   }
 
   @override
