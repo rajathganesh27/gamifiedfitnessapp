@@ -15,6 +15,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   final _emailController = TextEditingController();
+  final _heightController = TextEditingController();
+  final _weightController = TextEditingController();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -24,6 +26,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     _nameController.dispose();
     _ageController.dispose();
     _emailController.dispose();
+    _heightController.dispose();
+    _weightController.dispose();
 
     super.dispose();
   }
@@ -49,12 +53,16 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           final name = _nameController.text.trim();
           final email = _emailController.text.trim();
           final age = int.tryParse(_ageController.text.trim()) ?? 0;
+          final height = double.tryParse(_heightController.text.trim()) ?? 0;
+          final weight = double.tryParse(_weightController.text.trim()) ?? 0;
 
           final updateData = {
             'uid': uid,
             'name': name,
             'age': age,
             'email': email,
+            'height': height,
+            'weight': weight,
             'profileCompleted': true,
           };
 
@@ -177,6 +185,47 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     return null;
                   },
                 ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _heightController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Height (in cm)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.height),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your height';
+                    }
+                    final height = double.tryParse(value);
+                    if (height == null || height < 50 || height > 250) {
+                      return 'Enter a valid height in cm';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 16),
+                TextFormField(
+                  controller: _weightController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Weight (in kg)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.fitness_center),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your weight';
+                    }
+                    final weight = double.tryParse(value);
+                    if (weight == null || weight < 20 || weight > 300) {
+                      return 'Enter a valid weight in kg';
+                    }
+                    return null;
+                  },
+                ),
+
                 SizedBox(height: 16),
 
                 if (_errorMessage != null)

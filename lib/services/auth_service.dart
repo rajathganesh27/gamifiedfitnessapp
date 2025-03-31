@@ -59,6 +59,8 @@ class AuthService extends ChangeNotifier {
     String name,
     String phone,
     int age,
+    double height,
+    double weight,
   ) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -72,7 +74,10 @@ class AuthService extends ChangeNotifier {
         'name': name,
         'phone': phone,
         'age': age,
-        'level': 'Beginner', // 👈 initial level
+        'height': height,
+        'weight': weight,
+        'role': 'user',
+        'level': 'Beginner',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -134,9 +139,6 @@ class AuthService extends ChangeNotifier {
             'phone': _user!.phoneNumber,
             'role': 'user',
             'createdAt': Timestamp.now(),
-            'points': 0,
-            'badges': [],
-            'workouts': [],
           });
         }
       }
