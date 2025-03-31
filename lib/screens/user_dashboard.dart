@@ -452,16 +452,22 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
     );
   }
 
-  Widget _buildHeader() {
+ Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        // Empty space on the left
+        SizedBox(width: 40),
+
+        // Profile icon on the right
         GestureDetector(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => ProfileScreen()),
-            ).then((_) => _loadUserStepData()); // Reload data when returning from profile
+            ).then(
+              (_) => _loadUserStepData(),
+            ); // Reload data when returning from profile
           },
           child: Container(
             padding: EdgeInsets.all(8),
@@ -470,16 +476,17 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.person,
+              Icons.person, // Profile icon
               size: 26,
               color: Colors.black87,
             ),
           ),
         ),
-        Icon(Icons.notifications_none_outlined, size: 26),
       ],
     );
   }
+
+
 
   Widget _buildStepCountCard() {
     // Get step status icon
@@ -956,6 +963,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
           size: 26,
         ),
       ),
+
     );
   }
 }
