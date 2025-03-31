@@ -139,7 +139,7 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                   Icon(
                     Icons.phone_android,
                     size: 100,
-                    color: Colors.green,
+                    color: const Color(0xFF2196F3),
                   ),
                   SizedBox(height: 32),
                   Text(
@@ -196,13 +196,18 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                             controller: _phoneController,
                             decoration: InputDecoration(
                               hintText: '9876543210',
-                              border: InputBorder.none,
-                              hintStyle: TextStyle(color: Colors.grey.shade400),
-                            ),
-                            keyboardType: TextInputType.phone,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.black87,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: Color(0xFF2196F3),
+                                ),
+                              ),
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -254,7 +259,7 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                           ),
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.green,
+                      backgroundColor: const Color(0xFF2196F3),
                       foregroundColor: Colors.white,
                       elevation: 2,
                       shape: RoundedRectangleBorder(
