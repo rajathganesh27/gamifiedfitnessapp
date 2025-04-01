@@ -268,18 +268,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         SizedBox(height: 8),
         _buildProfileCard([
-          _buildProfileItem(Icons.star, "Level", data['level'] ?? "Beginner"),
-          _buildDivider(),
-          _buildProfileItem(
-            Icons.local_fire_department,
-            "Total Workouts",
-            data['workouts']?.toString() ?? "0",
-          ),
+
           _buildDivider(),
           _buildProfileItem(
             Icons.trending_up,
             "Progress",
-            "${data['progress'] ?? '0'}%",
+            "${data['progress'] ?? '30'}%",
           ),
         ]),
         SizedBox(height: 20),
