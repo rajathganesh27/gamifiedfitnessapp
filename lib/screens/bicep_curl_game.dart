@@ -234,9 +234,9 @@ class _BicepCurlGameState extends State<BicepCurlGame>
       if (user != null) {
         final uid = user.uid;
 
+        // 🔄 Fetch name from 'users' collection
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
-
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
         final bicepCurlCollection = FirebaseFirestore.instance.collection(
@@ -246,7 +246,7 @@ class _BicepCurlGameState extends State<BicepCurlGame>
           'combined_scores',
         );
 
-        // ✅ Save bicep curl score
+        // ✅ Update leaderboard
         await bicepCurlCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
@@ -254,7 +254,6 @@ class _BicepCurlGameState extends State<BicepCurlGame>
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Update combined score
         await combinedCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
@@ -262,26 +261,55 @@ class _BicepCurlGameState extends State<BicepCurlGame>
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Fetch combined score
         final combinedDoc = await combinedCollection.doc(uid).get();
         final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
 
-        // ✅ Determine new level
-        final newLevelLabel = _getLevelLabel(combinedScore);
+        final levelName = determineLevel(combinedScore);
 
-        // ✅ Update level in 'users'
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'level': newLevelLabel,
+          'level': levelName,
+        }, SetOptions(merge: true));
+
+        // ✅ Achievement update for bicep curls
+        final achievementRef = FirebaseFirestore.instance
+            .collection('user_achievements')
+            .doc(uid);
+        final currentAchievement = await achievementRef.get();
+        Map<String, dynamic> data = currentAchievement.data() ?? {};
+
+        Map<String, dynamic> bicepData =
+            data['bicepcurls'] ?? {'level': 1, 'count': 0, 'target': 15};
+
+        int newCount = (bicepData['count'] ?? 0) + _score;
+        int level = bicepData['level'] ?? 1;
+
+        List<int> targets = [15, 40, 80];
+        int maxLevel = targets.length;
+
+        while (level <= maxLevel && newCount >= targets[level - 1]) {
+          newCount -= targets[level - 1];
+          level++;
+        }
+
+        int nextTarget =
+            (level <= maxLevel) ? targets[level - 1] : targets.last;
+
+        await achievementRef.set({
+          'bicepcurls': {
+            'level': level.clamp(1, maxLevel + 1),
+            'count': newCount,
+            'target': nextTarget,
+          },
         }, SetOptions(merge: true));
       }
     } catch (e) {
-      print("Error saving bicep curl score: $e");
+      print("Error saving score or achievements: $e");
     }
 
     widget.onGameComplete(_score);
   }
 
-  String _getLevelLabel(int score) {
+  String determineLevel(int score) {
     if (score < 200) return 'Beginner';
     if (score < 400) return 'Intermediate';
     if (score < 600) return 'Advanced';

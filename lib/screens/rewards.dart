@@ -23,10 +23,11 @@ class _RewardsScreenState extends State<RewardsScreen> {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null) {
-        final doc = await FirebaseFirestore.instance
-            .collection('user_achievements')
-            .doc(uid)
-            .get();
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('user_achievements')
+                .doc(uid)
+                .get();
 
         if (doc.exists) {
           setState(() {
@@ -64,16 +65,14 @@ class _RewardsScreenState extends State<RewardsScreen> {
         elevation: 0,
         title: Text(
           "My Achievements",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         leading: BackButton(color: Colors.black),
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: Colors.blue))
-          : _buildRewardsContent(),
+      body:
+          _isLoading
+              ? Center(child: CircularProgressIndicator(color: Colors.blue))
+              : _buildRewardsContent(),
     );
   }
 
@@ -160,11 +159,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  Icons.emoji_events,
-                  color: Colors.white,
-                  size: 30,
-                ),
+                child: Icon(Icons.emoji_events, color: Colors.white, size: 30),
               ),
               SizedBox(width: 16),
               Expanded(
@@ -215,7 +210,8 @@ class _RewardsScreenState extends State<RewardsScreen> {
     List<String> badgeLevels,
     List<int> targetCounts,
   ) {
-    final exerciseData = userAchievements[exerciseKey] ??
+    final exerciseData =
+        userAchievements[exerciseKey] ??
         {'level': 1, 'count': 0, 'target': targetCounts[0]};
 
     final currentLevel = exerciseData['level'] as int;
@@ -263,10 +259,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                   SizedBox(height: 4),
                   Text(
                     "Level $currentLevel • ${currentCount} completed",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -313,40 +306,35 @@ class _RewardsScreenState extends State<RewardsScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isUnlocked
-                    ? color
-                    : isCurrent
+                color:
+                    isUnlocked
+                        ? color
+                        : isCurrent
                         ? Colors.grey.shade200
                         : Colors.grey.shade100,
                 shape: BoxShape.circle,
-                boxShadow: isUnlocked
-                    ? [
-                        BoxShadow(
-                          color: color.withOpacity(0.3),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                    : [],
+                boxShadow:
+                    isUnlocked
+                        ? [
+                          BoxShadow(
+                            color: color.withOpacity(0.3),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                        : [],
               ),
-              child: isUnlocked
-                  ? Icon(
-                      Icons.emoji_events,
-                      color: Colors.white,
-                      size: 40,
-                    )
-                  : isCurrent
+              child:
+                  isUnlocked
+                      ? Icon(Icons.emoji_events, color: Colors.white, size: 40)
+                      : isCurrent
                       ? CircularProgressIndicator(
-                          value: progress,
-                          backgroundColor: Colors.grey.shade300,
-                          valueColor: AlwaysStoppedAnimation<Color>(color),
-                          strokeWidth: 6,
-                        )
-                      : Icon(
-                          Icons.lock,
-                          color: Colors.grey.shade400,
-                          size: 30,
-                        ),
+                        value: progress,
+                        backgroundColor: Colors.grey.shade300,
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                        strokeWidth: 6,
+                      )
+                      : Icon(Icons.lock, color: Colors.grey.shade400, size: 30),
             ),
             if (isUnlocked)
               Positioned(
@@ -385,10 +373,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
         SizedBox(height: 4),
         Text(
           "$target reps",
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),
       ],
     );
