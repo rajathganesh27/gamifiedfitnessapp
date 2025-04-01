@@ -351,6 +351,40 @@ class _PushUpGameState extends State<PushUpGame>
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'level': levelName,
         }, SetOptions(merge: true));
+
+        // 🔄 Update user achievements (pushups)
+        final achievementRef = FirebaseFirestore.instance
+            .collection('user_achievements')
+            .doc(uid);
+
+        final currentAchievement = await achievementRef.get();
+        Map<String, dynamic> data = currentAchievement.data() ?? {};
+
+        Map<String, dynamic> pushupData =
+            data['pushups'] ?? {'level': 1, 'count': 0, 'target': 20};
+
+        int newCount = (pushupData['count'] ?? 0) + _score;
+        int level = pushupData['level'] ?? 1;
+
+        // Target mapping per level
+        List<int> targets = [20, 50, 100];
+        int maxLevel = targets.length;
+
+        while (level <= maxLevel && newCount >= targets[level - 1]) {
+          newCount -= targets[level - 1];
+          level++;
+        }
+
+        int nextTarget =
+            (level <= maxLevel) ? targets[level - 1] : targets.last;
+
+        await achievementRef.set({
+          'pushups': {
+            'level': level.clamp(1, maxLevel + 1),
+            'count': newCount,
+            'target': nextTarget,
+          },
+        }, SetOptions(merge: true));
       }
     } catch (e) {
       print("Error saving push-up score: $e");

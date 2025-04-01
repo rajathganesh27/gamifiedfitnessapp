@@ -236,7 +236,6 @@ class _SquatGameState extends State<SquatGame>
 
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
-
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
         final squatsCollection = FirebaseFirestore.instance.collection(
@@ -262,16 +261,48 @@ class _SquatGameState extends State<SquatGame>
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Fetch combined score
+        // ✅ Fetch combined score and update level
         final combinedDoc = await combinedCollection.doc(uid).get();
         final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
-
-        // ✅ Determine new level
         final newLevelLabel = _getLevelLabel(combinedScore);
 
-        // ✅ Update level in 'users'
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'level': newLevelLabel,
+        }, SetOptions(merge: true));
+
+        // ✅ Update user achievements: squats
+        final achievementRef = FirebaseFirestore.instance
+            .collection('user_achievements')
+            .doc(uid);
+
+        final achievementDoc = await achievementRef.get();
+        Map<String, dynamic> achievements = achievementDoc.data() ?? {};
+
+        Map<String, dynamic> squatData =
+            achievements['squats'] ?? {'level': 1, 'count': 0, 'target': 20};
+
+        int currentLevel = squatData['level'];
+        int newCount = (squatData['count'] ?? 0) + _score;
+        List<int> targets = [20, 50, 100];
+        int maxLevel = targets.length;
+
+        while (currentLevel <= maxLevel &&
+            newCount >= targets[currentLevel - 1]) {
+          newCount -= targets[currentLevel - 1];
+          currentLevel++;
+        }
+
+        int nextTarget =
+            (currentLevel <= maxLevel)
+                ? targets[currentLevel - 1]
+                : targets.last;
+
+        await achievementRef.set({
+          'squats': {
+            'level': currentLevel.clamp(1, maxLevel + 1),
+            'count': newCount,
+            'target': nextTarget,
+          },
         }, SetOptions(merge: true));
       }
     } catch (e) {

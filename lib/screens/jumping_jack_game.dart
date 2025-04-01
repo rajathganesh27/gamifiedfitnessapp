@@ -288,12 +288,12 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
       if (user != null) {
         final uid = user.uid;
 
-        // Fetch display name from 'users' collection
+        // 🔄 Fetch display name from 'users' collection
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
-        // Separate collection for Jumping Jack
+        // ✅ Separate collection for Jumping Jack
         final jumpingJackCollection = FirebaseFirestore.instance.collection(
           'jumping_jacks',
         );
@@ -304,7 +304,7 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // Separate collection for Combined Scores
+        // ✅ Separate collection for Combined Scores
         final combinedCollection = FirebaseFirestore.instance.collection(
           'combined_scores',
         );
@@ -315,14 +315,47 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // Fetch updated combined score
+        // 🔄 Fetch updated combined score
         final combinedDoc = await combinedCollection.doc(uid).get();
         final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
 
-        // Update level
+        // ✅ Update level
         final levelName = determineLevel(combinedScore);
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'level': levelName,
+        }, SetOptions(merge: true));
+        // 🔄 Update user achievements (jumpingjacks)
+        final achievementRef = FirebaseFirestore.instance
+            .collection('user_achievements')
+            .doc(uid);
+
+        final currentAchievement = await achievementRef.get();
+        Map<String, dynamic> data = currentAchievement.data() ?? {};
+
+        Map<String, dynamic> jackData =
+            data['jumpingjacks'] ?? {'level': 1, 'count': 0, 'target': 30};
+
+        int newCount = (jackData['count'] ?? 0) + _jumpingJackCount;
+        int level = jackData['level'] ?? 1;
+
+        // Target mapping per level
+        List<int> targets = [30, 75, 150];
+        int maxLevel = targets.length;
+
+        while (level <= maxLevel && newCount >= targets[level - 1]) {
+          newCount -= targets[level - 1];
+          level++;
+        }
+
+        int nextTarget =
+            (level <= maxLevel) ? targets[level - 1] : targets.last;
+
+        await achievementRef.set({
+          'jumpingjacks': {
+            'level': level.clamp(1, maxLevel + 1),
+            'count': newCount,
+            'target': nextTarget,
+          },
         }, SetOptions(merge: true));
       }
     } catch (e) {

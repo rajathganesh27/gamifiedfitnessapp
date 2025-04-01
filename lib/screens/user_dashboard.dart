@@ -19,7 +19,8 @@ class UserDashboard extends StatefulWidget {
   State<UserDashboard> createState() => _UserDashboardState();
 }
 
-class _UserDashboardState extends State<UserDashboard> with SingleTickerProviderStateMixin {
+class _UserDashboardState extends State<UserDashboard>
+    with SingleTickerProviderStateMixin {
   List<CameraDescription> _cameras = [];
   TabController? _tabController;
   int _selectedIndex = 0;
@@ -28,7 +29,10 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
   late Stream<StepCount> _stepCountStream;
   late Stream<PedestrianStatus> _pedestrianStatusStream;
   String _status = '?', _steps = '0';
-  List<FlSpot> _stepsData = List.generate(7, (index) => FlSpot(index.toDouble(), 0));
+  List<FlSpot> _stepsData = List.generate(
+    7,
+    (index) => FlSpot(index.toDouble(), 0),
+  );
 
   // Firebase variables
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -186,7 +190,8 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
   Future<bool> _checkActivityRecognitionPermission() async {
     bool granted = await Permission.activityRecognition.isGranted;
     if (!granted) {
-      granted = await Permission.activityRecognition.request() ==
+      granted =
+          await Permission.activityRecognition.request() ==
           PermissionStatus.granted;
     }
     return granted;
@@ -197,13 +202,18 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
     if (!granted) {
       // Show permission denied message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Activity recognition permission is required for step tracking')),
+        SnackBar(
+          content: Text(
+            'Activity recognition permission is required for step tracking',
+          ),
+        ),
       );
       return;
     }
 
     _pedestrianStatusStream = Pedometer.pedestrianStatusStream;
-    _pedestrianStatusStream.listen(onPedestrianStatusChanged)
+    _pedestrianStatusStream
+        .listen(onPedestrianStatusChanged)
         .onError(onPedestrianStatusError);
 
     _stepCountStream = Pedometer.stepCountStream;
@@ -237,9 +247,13 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
     List<FlSpot> updatedData = List<FlSpot>.from(_stepsData);
 
     // Update today's value in the chart
-    int todayIndex = DateTime.now().weekday - 1; // Assuming the last spot is today
+    int todayIndex =
+        DateTime.now().weekday - 1; // Assuming the last spot is today
     if (updatedData.length > todayIndex) {
-      updatedData[todayIndex] = FlSpot(todayIndex.toDouble(), _localStepCount.toDouble());
+      updatedData[todayIndex] = FlSpot(
+        todayIndex.toDouble(),
+        _localStepCount.toDouble(),
+      );
     }
 
     setState(() {
@@ -252,12 +266,13 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
 
     try {
       // Check if today's record already exists
-      DocumentSnapshot stepDoc = await _firestore
-          .collection('users')
-          .doc(_userId)
-          .collection('stepData')
-          .doc(_todayDate)
-          .get();
+      DocumentSnapshot stepDoc =
+          await _firestore
+              .collection('users')
+              .doc(_userId)
+              .collection('stepData')
+              .doc(_todayDate)
+              .get();
 
       if (stepDoc.exists) {
         // Update existing record
@@ -267,9 +282,9 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
             .collection('stepData')
             .doc(_todayDate)
             .update({
-          'steps': steps,
-          'lastUpdated': FieldValue.serverTimestamp(),
-        });
+              'steps': steps,
+              'lastUpdated': FieldValue.serverTimestamp(),
+            });
       } else {
         // Create new record
         await _firestore
@@ -278,11 +293,11 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
             .collection('stepData')
             .doc(_todayDate)
             .set({
-          'date': _todayDate,
-          'steps': steps,
-          'created': FieldValue.serverTimestamp(),
-          'lastUpdated': FieldValue.serverTimestamp(),
-        });
+              'date': _todayDate,
+              'steps': steps,
+              'created': FieldValue.serverTimestamp(),
+              'lastUpdated': FieldValue.serverTimestamp(),
+            });
       }
     } catch (e) {
       print('Error saving steps data: $e');
@@ -319,12 +334,13 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
       }
 
       // Query Firestore for the step data
-      QuerySnapshot stepsSnapshot = await _firestore
-          .collection('users')
-          .doc(_userId)
-          .collection('stepData')
-          .where('date', whereIn: lastSevenDays)
-          .get();
+      QuerySnapshot stepsSnapshot =
+          await _firestore
+              .collection('users')
+              .doc(_userId)
+              .collection('stepData')
+              .where('date', whereIn: lastSevenDays)
+              .get();
 
       // Populate data
       for (var doc in stepsSnapshot.docs) {
@@ -336,7 +352,8 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
       // use the local count instead (e.g., if app was restarted)
       if (weekData[_todayDate] < _localStepCount) {
         weekData[_todayDate] = _localStepCount;
-      } else if (weekData[_todayDate] > _localStepCount && weekData[_todayDate] > 0) {
+      } else if (weekData[_todayDate] > _localStepCount &&
+          weekData[_todayDate] > 0) {
         // If Firebase has a higher count (maybe from another device), update our local
         _localStepCount = weekData[_todayDate];
         setState(() {
@@ -409,7 +426,6 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
     }
   }
 
-
   // Get day name from date
   String _getDayName(int dayOffset) {
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -431,7 +447,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
                 SizedBox(height: 24),
                 _buildStepCountCard(),
                 SizedBox(height: 20),
-                _buildCaloriesCard(),
+                // _buildCaloriesCard(),
                 SizedBox(height: 20),
                 Text(
                   "Exercises",
@@ -452,7 +468,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
     );
   }
 
- Widget _buildHeader() {
+  Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -485,8 +501,6 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
       ],
     );
   }
-
-
 
   Widget _buildStepCountCard() {
     // Get step status icon
@@ -537,11 +551,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStepDataColumn(
-                _steps,
-                "steps",
-                "Today",
-              ),
+              _buildStepDataColumn(_steps, "steps", "Today"),
               _buildStepDataColumn(
                 "${exerciseStats['dailyStepGoal']}",
                 "steps",
@@ -558,15 +568,8 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
           _buildTabBar(),
           SizedBox(height: 20),
           _isLoadingData
-              ? Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                  ),
-                )
-              : Container(
-                  height: 100,
-                  child: _buildStepsChart(),
-                ),
+              ? Center(child: CircularProgressIndicator(color: Colors.white))
+              : Container(height: 100, child: _buildStepsChart()),
           SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -608,10 +611,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
         SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.white70,
-          ),
+          style: GoogleFonts.poppins(fontSize: 14, color: Colors.white70),
         ),
       ],
     );
@@ -642,7 +642,8 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
+          color:
+              isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
@@ -689,9 +690,13 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
         minX: 0,
         maxX: 6,
         minY: 0,
-        maxY: _stepsData.isEmpty
-            ? 10000
-            : _stepsData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b) * 1.2,
+        maxY:
+            _stepsData.isEmpty
+                ? 10000
+                : _stepsData
+                        .map((spot) => spot.y)
+                        .reduce((a, b) => a > b ? a : b) *
+                    1.2,
       ),
     );
   }
@@ -781,7 +786,9 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
                           value: exerciseStats['calories'] / 2800,
                           strokeWidth: 8,
                           backgroundColor: Colors.white.withOpacity(0.2),
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -848,25 +855,37 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
                       ),
                       SizedBox(height: 5),
                       FutureBuilder<DocumentSnapshot>(
-                        future: _userId != null
-                            ? _firestore
-                                .collection('users')
-                                .doc(_userId)
-                                .collection('exerciseHistory')
-                                .doc(workout.title.toLowerCase().replaceAll(' ', '_'))
-                                .get()
-                            : null,
+                        future:
+                            _userId != null
+                                ? _firestore
+                                    .collection('users')
+                                    .doc(_userId)
+                                    .collection('exerciseHistory')
+                                    .doc(
+                                      workout.title.toLowerCase().replaceAll(
+                                        ' ',
+                                        '_',
+                                      ),
+                                    )
+                                    .get()
+                                : null,
                         builder: (context, snapshot) {
                           String lastTime = "Not started yet";
 
-                          if (snapshot.connectionState == ConnectionState.waiting) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
                             lastTime = "Loading...";
-                          } else if (snapshot.hasData && snapshot.data!.exists) {
-                            Map<String, dynamic>? data = snapshot.data!.data() as Map<String, dynamic>?;
-                            if (data != null && data.containsKey('lastCompleted')) {
-                              Timestamp timestamp = data['lastCompleted'] as Timestamp;
+                          } else if (snapshot.hasData &&
+                              snapshot.data!.exists) {
+                            Map<String, dynamic>? data =
+                                snapshot.data!.data() as Map<String, dynamic>?;
+                            if (data != null &&
+                                data.containsKey('lastCompleted')) {
+                              Timestamp timestamp =
+                                  data['lastCompleted'] as Timestamp;
                               DateTime dateTime = timestamp.toDate();
-                              lastTime = "Last: ${DateFormat('MMM d, h:mm a').format(dateTime)}";
+                              lastTime =
+                                  "Last: ${DateFormat('MMM d, h:mm a').format(dateTime)}";
                             }
                           }
 
@@ -883,24 +902,26 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: _cameras.isEmpty
-                      ? null
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DetectionScreen(
-                                exerciseDataModel: workout,
-                                cameras: _cameras,
+                  onPressed:
+                      _cameras.isEmpty
+                          ? null
+                          : () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => DetectionScreen(
+                                      exerciseDataModel: workout,
+                                      cameras: _cameras,
+                                    ),
                               ),
-                            ),
-                          ).then((_) => setState(() {})); // Refresh after exercise
-                        },
+                            ).then(
+                              (_) => setState(() {}),
+                            ); // Refresh after exercise
+                          },
                   child: Text(
                     "Start",
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
@@ -963,7 +984,6 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
           size: 26,
         ),
       ),
-
     );
   }
 }
