@@ -431,7 +431,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
                 SizedBox(height: 24),
                 _buildStepCountCard(),
                 SizedBox(height: 20),
-                _buildCaloriesCard(),
+               // _buildCaloriesCard(),
                 SizedBox(height: 20),
                 Text(
                   "Exercises",
@@ -696,7 +696,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
     );
   }
 
-  Widget _buildCaloriesCard() {
+ Widget _buildCaloriesCard() {
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -803,7 +803,7 @@ class _UserDashboardState extends State<UserDashboard> with SingleTickerProvider
         ],
       ),
     );
-  }
+  } 
 
   Widget _buildExercisesList() {
     return ListView.builder(
