@@ -56,7 +56,7 @@ class _PushUpGameState extends State<PushUpGame>
   final double _gameSpeed = 2.0;
 
   // Theme color
-  final Color _themeColor = Colors.red;
+  final Color _themeColor = Colors.blue;
 
   @override
   void initState() {
@@ -202,19 +202,22 @@ class _PushUpGameState extends State<PushUpGame>
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
+    // Determine if obstacle should be in upper or lower half
+    final bool isUpperHalf = _random.nextBool();
+
     // Create obstacle in a challenging location
-    final obstacleHeight = screenHeight * (_random.nextDouble() * 0.15 + 0.1);
+    final obstacleHeight = screenHeight * (_random.nextDouble() * 0.15 + 0.15);
 
     double obstacleY;
 
-    // Decide if obstacle should be in upper or lower part
-    bool isUpper = _random.nextBool();
-    if (isUpper) {
-      // Upper obstacle
-      obstacleY = screenHeight * 0.1;
+    if (isUpperHalf) {
+      // Place in upper half (top quarter of screen)
+      obstacleY = _random.nextDouble() * (screenHeight * 0.25);
     } else {
-      // Lower obstacle
-      obstacleY = screenHeight * 0.7;
+      // Place in lower half (bottom quarter of screen)
+      obstacleY =
+          screenHeight * 0.75 +
+          (_random.nextDouble() * (screenHeight * 0.25 - obstacleHeight));
     }
 
     // Width of obstacles
@@ -376,241 +379,298 @@ class _PushUpGameState extends State<PushUpGame>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Camera background (shows user's body)
-        if (widget.cameraController != null &&
-            widget.cameraController!.value.isInitialized)
-          Positioned.fill(child: CameraPreview(widget.cameraController!)),
+    final Size size = MediaQuery.of(context).size;
 
-        // Dark overlay to see game elements better
-        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.3))),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Camera background (shows user's body)
+          if (widget.cameraController != null &&
+              widget.cameraController!.value.isInitialized)
+            Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: size.width,
+              height: size.height,
+              child: AspectRatio(
+                aspectRatio: widget.cameraController!.value.aspectRatio,
+                child: CameraPreview(widget.cameraController!),
+              ),
+            ),
 
-        // Pose skeleton visualization
-        if (widget.poseResults != null &&
-            widget.poseResults!.isNotEmpty &&
-            widget.cameraController != null)
+          // Dark overlay to see game elements better
           Positioned.fill(
-            child: CustomPaint(
-              painter: PosePainter(
-                Size(
-                  widget.cameraController!.value.previewSize!.height,
-                  widget.cameraController!.value.previewSize!.width,
+            child: Container(color: Colors.black.withOpacity(0.3)),
+          ),
+
+          // Pose skeleton visualization
+          if (widget.poseResults != null &&
+              widget.poseResults!.isNotEmpty &&
+              widget.cameraController != null)
+            Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: size.width,
+              height: size.height,
+              child: CustomPaint(
+                painter: PosePainter(
+                  Size(
+                    widget.cameraController!.value.previewSize!.height,
+                    widget.cameraController!.value.previewSize!.width,
+                  ),
+                  widget.poseResults!,
+                  isFrontCamera:
+                      _currentLensDirection == CameraLensDirection.front,
                 ),
-                widget.poseResults!,
-                isFrontCamera:
-                    _currentLensDirection == CameraLensDirection.front,
+              ),
+            ),
+
+          // Top header with game title - Matching squat game style
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(top: 60, bottom: 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    "Push-Up Game",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_gameActive)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        "Score: $_score",
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
 
-        // Obstacles
-        ..._obstacles.map(
-          (obstacle) => Positioned(
-            left: obstacle.x,
-            top: obstacle.y,
-            width: obstacle.width,
-            height: obstacle.height,
-            child: Container(
-              decoration: BoxDecoration(
-                color: _themeColor.withOpacity(0.7),
-                border: Border.all(color: _themeColor, width: 2),
-                borderRadius: BorderRadius.circular(10),
+          // Obstacles
+          ..._obstacles.map(
+            (obstacle) => Positioned(
+              left: obstacle.x,
+              top: obstacle.y,
+              width: obstacle.width,
+              height: obstacle.height,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _themeColor.withOpacity(0.7),
+                  border: Border.all(color: _themeColor, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),
-        ),
 
-        // Coins
-        ..._coins.map(
-          (coin) => Positioned(
-            left: coin.x,
-            top: coin.y,
-            width: coin.size,
-            height: coin.size,
+          // Coins
+          ..._coins.map(
+            (coin) => Positioned(
+              left: coin.x,
+              top: coin.y,
+              width: coin.size,
+              height: coin.size,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.orange[800]!, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.yellow.withOpacity(0.5),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(Icons.star, color: Colors.orange[800], size: 16),
+                ),
+              ),
+            ),
+          ),
+
+          // Platform (controlled by pushups)
+          Positioned(
+            left: MediaQuery.of(context).size.width / 4,
+            top:
+                MediaQuery.of(context).size.height * _platformPosition -
+                _platformHeight / 2,
+            width: _platformWidth,
+            height: _platformHeight,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.amber,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.orange[800]!, width: 2),
+                color: Colors.blue,
+                borderRadius: BorderRadius.circular(5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.yellow.withOpacity(0.5),
+                    color: Colors.blue.withOpacity(0.5),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
                 ],
               ),
               child: Center(
-                child: Icon(Icons.star, color: Colors.orange[800], size: 16),
+                child: Icon(
+                  Icons.fitness_center,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ),
-        ),
 
-        // Platform (controlled by pushups)
-        Positioned(
-          left: MediaQuery.of(context).size.width / 4,
-          top:
-              MediaQuery.of(context).size.height * _platformPosition -
-              _platformHeight / 2,
-          width: _platformWidth,
-          height: _platformHeight,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.circular(5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.5),
-                  blurRadius: 10,
-                  spreadRadius: 2,
+          // Countdown timer display
+          if (_isCountingDown)
+            Center(
+              child: Container(
+                padding: EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.8),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
-            child: Center(
-              child: Icon(Icons.fitness_center, color: Colors.white, size: 16),
-            ),
-          ),
-        ),
-
-        // Score
-        Positioned(
-          top: 40,
-          right: 20,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-            decoration: BoxDecoration(
-              color: _themeColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Score: $_score',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    offset: Offset(1, 1),
-                    blurRadius: 3,
-                    color: Colors.black,
+                child: Text(
+                  '$_countdownValue',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 60,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+              ),
+            ),
+
+          // Game over message
+          if (_gameOver)
+            Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Game Over!\nScore: $_score',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+          // Instructions (only visible before game starts)
+          if (!_gameActive && !_isCountingDown)
+            Positioned(
+              bottom: 120,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  'Do pushups to move the platform up and down. Collect coins and avoid obstacles!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+              ),
+            ),
+
+          // Bottom controls (similar to squat game)
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Camera toggle button
+                  FloatingActionButton(
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    child: Icon(
+                      _currentLensDirection == CameraLensDirection.back
+                          ? Icons.camera_front
+                          : Icons.camera_rear,
+                      color: Colors.white,
+                    ),
+                    onPressed: _toggleCamera,
+                  ),
+
+                  // Play button or Exit button
+                  if (!_gameActive && !_isCountingDown)
+                    ElevatedButton(
+                      onPressed: startGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        "Start Game",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: endGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        "Exit Game",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-        ),
-
-        // Countdown timer display
-        if (_isCountingDown)
-          Center(
-            child: Container(
-              padding: EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: _themeColor.withOpacity(0.8),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '$_countdownValue',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 60,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-        // Game over message
-        if (_gameOver)
-          Center(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-              decoration: BoxDecoration(
-                color: _themeColor.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'Game Over!\nScore: $_score',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-        // Instructions
-        if (!_gameActive && !_isCountingDown)
-          Positioned(
-            bottom: 120,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Text(
-                'Do pushups to move the platform up and down. Collect coins and avoid obstacles!',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-            ),
-          ),
-
-        // Play button
-        if (!_gameActive && !_gameOver && !_isCountingDown)
-          Positioned(
-            bottom: 50,
-            left: 40,
-            right: 40,
-            child: ElevatedButton(
-              onPressed: startGame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _themeColor,
-                padding: EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: Text(
-                'Play',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-        // Back button
-        Positioned(
-          top: 40,
-          left: 20,
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white, size: 30),
-            onPressed: endGame,
-          ),
-        ),
-
-        // Camera toggle button
-        Positioned(
-          top: 40,
-          left: 70,
-          child: IconButton(
-            icon: Icon(
-              _currentLensDirection == CameraLensDirection.back
-                  ? Icons.camera_front
-                  : Icons.camera_rear,
-              color: Colors.white,
-              size: 30,
-            ),
-            onPressed: _toggleCamera,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

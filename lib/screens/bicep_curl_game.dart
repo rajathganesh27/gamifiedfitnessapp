@@ -43,27 +43,15 @@ class _BicepCurlGameState extends State<BicepCurlGame>
   int _countdownValue = 3; // Countdown timer starting value
   bool _isCountingDown = false;
 
-  // Camera direction tracking
-  CameraLensDirection _currentLensDirection = CameraLensDirection.back;
-
   // Weight properties
   final double _weightSize = 50;
 
   // Obstacle speed
-  final double _obstacleSpeed = 1.5;
-
-  // Theme color
-  final Color _themeColor = Colors.indigo;
+  final double _obstacleSpeed = 1.5; // Very slow speed for obstacles
 
   @override
   void initState() {
     super.initState();
-
-    // Get initial camera direction if available
-    if (widget.cameraController != null) {
-      _currentLensDirection =
-          widget.cameraController!.description.lensDirection;
-    }
 
     // Create animation controller for smooth weight movement
     _weightController = AnimationController(
@@ -99,17 +87,12 @@ class _BicepCurlGameState extends State<BicepCurlGame>
   }
 
   void _toggleCamera() {
-    // Toggle between front and back cameras
     CameraLensDirection newDirection =
-        _currentLensDirection == CameraLensDirection.back
+        widget.cameraController?.description.lensDirection ==
+                CameraLensDirection.back
             ? CameraLensDirection.front
             : CameraLensDirection.back;
 
-    setState(() {
-      _currentLensDirection = newDirection;
-    });
-
-    // Call the parent's camera toggle function
     widget.onCameraToggle(newDirection);
   }
 
@@ -147,7 +130,7 @@ class _BicepCurlGameState extends State<BicepCurlGame>
       _gameActive = true;
     });
 
-    // Create obstacles periodically
+    // Create obstacles periodically (less frequently)
     _obstacleTimer = Timer.periodic(Duration(milliseconds: 3000), (timer) {
       if (!mounted || !_gameActive) {
         timer.cancel();
@@ -251,9 +234,9 @@ class _BicepCurlGameState extends State<BicepCurlGame>
       if (user != null) {
         final uid = user.uid;
 
-        // 🔄 Fetch name from 'users' collection
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
         final bicepCurlCollection = FirebaseFirestore.instance.collection(
@@ -263,7 +246,7 @@ class _BicepCurlGameState extends State<BicepCurlGame>
           'combined_scores',
         );
 
-        // ✅ Write to bicep_curls collection (score per game)
+        // ✅ Save bicep curl score
         await bicepCurlCollection.doc(uid).set({
           'uid': uid,
           'name': displayName,
@@ -279,26 +262,26 @@ class _BicepCurlGameState extends State<BicepCurlGame>
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Fetch updated combined score
+        // ✅ Fetch combined score
         final combinedDoc = await combinedCollection.doc(uid).get();
         final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
 
-        // 🧠 Update level based on combined score
-        final levelName = determineLevel(combinedScore);
+        // ✅ Determine new level
+        final newLevelLabel = _getLevelLabel(combinedScore);
 
-        // ✅ Update user's level in users collection
+        // ✅ Update level in 'users'
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'level': levelName,
+          'level': newLevelLabel,
         }, SetOptions(merge: true));
       }
     } catch (e) {
-      print("Error saving score to leaderboard: $e");
+      print("Error saving bicep curl score: $e");
     }
 
     widget.onGameComplete(_score);
   }
 
-  String determineLevel(int score) {
+  String _getLevelLabel(int score) {
     if (score < 200) return 'Beginner';
     if (score < 400) return 'Intermediate';
     if (score < 600) return 'Advanced';
@@ -317,71 +300,130 @@ class _BicepCurlGameState extends State<BicepCurlGame>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Camera background (shows user's body)
-        if (widget.cameraController != null &&
-            widget.cameraController!.value.isInitialized)
-          Positioned.fill(child: CameraPreview(widget.cameraController!)),
+    final Size size = MediaQuery.of(context).size;
 
-        // Dark overlay to see game elements better
-        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.3))),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Camera background (shows user's body)
+          if (widget.cameraController != null &&
+              widget.cameraController!.value.isInitialized)
+            Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: size.width,
+              height: size.height,
+              child: AspectRatio(
+                aspectRatio: widget.cameraController!.value.aspectRatio,
+                child: CameraPreview(widget.cameraController!),
+              ),
+            ),
 
-        // Pose skeleton visualization
-        if (widget.poseResults != null &&
-            widget.poseResults!.isNotEmpty &&
-            widget.cameraController != null)
+          // Dark overlay to see game elements better
           Positioned.fill(
-            child: CustomPaint(
-              painter: PosePainter(
-                Size(
-                  widget.cameraController!.value.previewSize!.height,
-                  widget.cameraController!.value.previewSize!.width,
-                ),
-                widget.poseResults!,
-              ),
-            ),
+            child: Container(color: Colors.black.withOpacity(0.3)),
           ),
 
-        // Obstacles
-        ..._obstacles.map(
-          (obstacle) => Positioned(
-            left: obstacle.x,
-            top: obstacle.y,
-            width: obstacle.width,
-            height: obstacle.height,
+          // Pose skeleton visualization
+          if (widget.poseResults != null &&
+              widget.poseResults!.isNotEmpty &&
+              widget.cameraController != null)
+            Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: size.width,
+              height: size.height,
+              child: CustomPaint(
+                painter: PosePainter(
+                  Size(
+                    widget.cameraController!.value.previewSize!.height,
+                    widget.cameraController!.value.previewSize!.width,
+                  ),
+                  widget.poseResults!,
+                  isFrontCamera:
+                      widget.cameraController!.description.lensDirection ==
+                      CameraLensDirection.front,
+                ),
+              ),
+            ),
+
+          // Top header with game title - Matching detection screen style
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
             child: Container(
+              padding: EdgeInsets.only(top: 60, bottom: 20),
               decoration: BoxDecoration(
-                color: _themeColor.withOpacity(0.7),
-                border: Border.all(color: _themeColor, width: 2),
-                borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    "Bicep Curl Game",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_gameActive)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        "Score: $_score",
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-        ),
 
-        // Weight (dumbbell)
-        Positioned(
-          left: MediaQuery.of(context).size.width / 2 - _weightSize / 2,
-          top:
-              MediaQuery.of(context).size.height * _weightPosition -
-              _weightSize / 2,
-          child: Container(
-            width: _weightSize,
-            height: _weightSize,
-            decoration: BoxDecoration(
-              color: Colors.amber,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.orange, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 10,
-                  spreadRadius: 2,
+          // Obstacles
+          ..._obstacles.map(
+            (obstacle) => Positioned(
+              left: obstacle.x,
+              top: obstacle.y,
+              width: obstacle.width,
+              height: obstacle.height,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.7),
+                  border: Border.all(color: Colors.green, width: 2),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              ],
+              ),
             ),
-            child: Center(
+          ),
+
+          // Weight (using same styling as ball in squat game)
+          Positioned(
+            left: MediaQuery.of(context).size.width / 2 - _weightSize / 2,
+            top:
+                MediaQuery.of(context).size.height * _weightPosition -
+                _weightSize / 2,
+            child: Container(
+              width: _weightSize,
+              height: _weightSize,
+              decoration: BoxDecoration(
+                color: Colors.yellow,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.orange, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              // Add dumbbell icon inside the ball
               child: Icon(
                 Icons.fitness_center,
                 color: Colors.orange[800],
@@ -389,145 +431,142 @@ class _BicepCurlGameState extends State<BicepCurlGame>
               ),
             ),
           ),
-        ),
 
-        // Score
-        Positioned(
-          top: 40,
-          right: 20,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-            decoration: BoxDecoration(
-              color: _themeColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Score: $_score',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                shadows: [
-                  Shadow(
-                    offset: Offset(1, 1),
-                    blurRadius: 3,
-                    color: Colors.black,
+          // Countdown timer display
+          if (_isCountingDown)
+            Center(
+              child: Container(
+                padding: EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.8),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$_countdownValue',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 60,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+              ),
+            ),
+
+          // Game over message
+          if (_gameOver)
+            Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Game Over!\nScore: $_score',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+          // Instructions (only visible before game starts)
+          if (!_gameActive && !_isCountingDown)
+            Positioned(
+              bottom: 120,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  'Do bicep curls to move the weight up and down to avoid the green obstacles.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+              ),
+            ),
+
+          // Bottom controls (similar to detection screen)
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Camera toggle button
+                  FloatingActionButton(
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    child: Icon(
+                      widget.cameraController?.description.lensDirection ==
+                              CameraLensDirection.back
+                          ? Icons.camera_front
+                          : Icons.camera_rear,
+                      color: Colors.white,
+                    ),
+                    onPressed: _toggleCamera,
+                  ),
+
+                  // Play button or Back button
+                  if (!_gameActive && !_isCountingDown)
+                    ElevatedButton(
+                      onPressed: startGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        "Start Game",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: endGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        "Exit Game",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
-        ),
-
-        // Countdown timer display
-        if (_isCountingDown)
-          Center(
-            child: Container(
-              padding: EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: _themeColor.withOpacity(0.8),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '$_countdownValue',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 60,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-        // Game over message
-        if (_gameOver)
-          Center(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-              decoration: BoxDecoration(
-                color: _themeColor.withOpacity(0.8),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'Game Over!\nScore: $_score',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-        // Instructions
-        if (!_gameActive && !_isCountingDown)
-          Positioned(
-            bottom: 120,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Text(
-                'Do bicep curls to move the weight up and down to avoid the obstacles.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-            ),
-          ),
-
-        // Play button
-        if (!_gameActive && !_gameOver && !_isCountingDown)
-          Positioned(
-            bottom: 50,
-            left: 40,
-            right: 40,
-            child: ElevatedButton(
-              onPressed: startGame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _themeColor,
-                padding: EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: Text(
-                'Play',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-        // Back button
-        Positioned(
-          top: 40,
-          left: 20,
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white, size: 30),
-            onPressed: endGame,
-          ),
-        ),
-
-        // Camera toggle button
-        Positioned(
-          top: 40,
-          left: 70,
-          child: IconButton(
-            icon: Icon(
-              _currentLensDirection == CameraLensDirection.back
-                  ? Icons.camera_front
-                  : Icons.camera_rear,
-              color: Colors.white,
-              size: 30,
-            ),
-            onPressed: _toggleCamera,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -10,7 +10,7 @@ import 'package:gamifiedfitnessapp/model/exercise_dart_model.dart';
 import 'package:gamifiedfitnessapp/pose_painter.dart';
 import 'package:gamifiedfitnessapp/screens/squat_game.dart';
 import 'package:gamifiedfitnessapp/screens/jumping_jack_game.dart';
-import 'package:gamifiedfitnessapp/screens/bicep_curl_game.dart'; // Import the bicep curl game
+import 'package:gamifiedfitnessapp/screens/bicep_curl_game.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:gamifiedfitnessapp/screens/pushup_game.dart';
 
@@ -22,11 +22,6 @@ class DetectionScreen extends StatefulWidget {
 
   @override
   State<DetectionScreen> createState() => _DetectionScreenState();
-  // void dispose() {
-  //   // Add the new stream to the dispose method
-  //   _isLoweredStreamController.close();
-  //   super.dispose();
-  // }
 }
 
 class _DetectionScreenState extends State<DetectionScreen> {
@@ -39,13 +34,13 @@ class _DetectionScreenState extends State<DetectionScreen> {
 
   // State for showing game
   bool _showGame = false;
+  bool _showExerciseCount = false; // Track whether to show count
   final _isSquattingStreamController = StreamController<bool>.broadcast();
-  // Stream for jumping jack hand positions
   final _landmarksStreamController =
       StreamController<Map<PoseLandmarkType, PoseLandmark>>.broadcast();
-  // Stream for bicep curl state
   final _isCurlingStreamController = StreamController<bool>.broadcast();
   final _isLoweredStreamController = StreamController<bool>.broadcast();
+
   // Track current camera index
   int _currentCameraIndex = 1; // Default to front camera (index 1)
 
@@ -174,8 +169,8 @@ class _DetectionScreenState extends State<DetectionScreen> {
     _isSquattingStreamController.close();
     _landmarksStreamController.close();
     _isCurlingStreamController.close();
-    _isLoweredStreamController.close(); // ✅ Local stream closed
-    widget.isLoweredStreamController.close(); // existing one
+    _isLoweredStreamController.close();
+    widget.isLoweredStreamController.close();
     super.dispose();
   }
 
@@ -205,8 +200,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
       } else if (widget.exerciseDataModel.type == ExerciseType.PushUps) {
         return Scaffold(
           body: PushUpGame(
-            isLoweredStream:
-                _isLoweredStreamController.stream, // ✅ Local stream here
+            isLoweredStream: _isLoweredStreamController.stream,
             cameraController: controller,
             poseResults: _scanResults,
             onGameComplete: (score) {
@@ -256,6 +250,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     }
 
     if (controller != null) {
+      // Camera Preview
       stackChildren.add(
         Positioned(
           top: 0.0,
@@ -274,6 +269,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
         ),
       );
 
+      // Pose detection overlay
       stackChildren.add(
         Positioned(
           top: 0.0,
@@ -284,75 +280,83 @@ class _DetectionScreenState extends State<DetectionScreen> {
         ),
       );
 
-      // Exercise counter display
+      // Top header with exercise info - Matching your app's style
       stackChildren.add(
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                margin: EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(50),
-                  color: widget.exerciseDataModel.color,
-                ),
-                child: Center(
-                  child: Text(
-                    widget.exerciseDataModel.type == ExerciseType.PushUps
-                        ? "$pushUpCount"
-                        : widget.exerciseDataModel.type == ExerciseType.Squats
-                        ? "$squatCount"
-                        : widget.exerciseDataModel.type ==
-                            ExerciseType.DownwardDogPlank
-                        ? "$plankToDownwardDogCount"
-                        : widget.exerciseDataModel.type ==
-                            ExerciseType.BicepCurl
-                        ? "$bicepCurlCount"
-                        : "$jumpingJackCount",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                width: 70,
-                height: 70,
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: EdgeInsets.only(top: 60, bottom: 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.7),
+                  Colors.transparent,
+                ],
               ),
-
-              // Add game button for Squats, Jumping Jacks, or Bicep Curls
-              if (widget.exerciseDataModel.type == ExerciseType.PushUps ||
-                  widget.exerciseDataModel.type == ExerciseType.Squats ||
-                  widget.exerciseDataModel.type == ExerciseType.JumpingJack ||
-                  widget.exerciseDataModel.type == ExerciseType.BicepCurl)
-                Container(
-                  margin: EdgeInsets.only(left: 20, bottom: 20),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _showGame = true;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: widget.exerciseDataModel.color,
-                      shape: CircleBorder(),
-                      padding: EdgeInsets.all(15),
-                    ),
-                    child: Icon(
-                      Icons.sports_esports,
-                      color: Colors.white,
-                      size: 30,
-                    ),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  widget.exerciseDataModel.title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
+                if (_showExerciseCount)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      widget.exerciseDataModel.type == ExerciseType.PushUps
+                          ? "$pushUpCount reps"
+                          : widget.exerciseDataModel.type == ExerciseType.Squats
+                          ? "$squatCount reps"
+                          : widget.exerciseDataModel.type ==
+                              ExerciseType.DownwardDogPlank
+                          ? "$plankToDownwardDogCount reps"
+                          : widget.exerciseDataModel.type ==
+                              ExerciseType.BicepCurl
+                          ? "$bicepCurlCount reps"
+                          : "$jumpingJackCount reps",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
 
-              // Add camera toggle button in the main screen too
-              Container(
-                margin: EdgeInsets.only(left: 20, bottom: 20),
-                child: ElevatedButton(
+      // Bottom controls - Matching the style of your app's buttons
+      stackChildren.add(
+        Positioned(
+          bottom: 30,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Camera toggle button
+                FloatingActionButton(
+                  backgroundColor: Colors.white.withOpacity(0.3),
+                  child: Icon(
+                    controller.description.lensDirection ==
+                            CameraLensDirection.back
+                        ? Icons.camera_front
+                        : Icons.camera_rear,
+                    color: Colors.white,
+                  ),
                   onPressed: () {
-                    // Toggle between front and back cameras
                     CameraLensDirection newDirection =
                         controller.description.lensDirection ==
                                 CameraLensDirection.back
@@ -360,57 +364,59 @@ class _DetectionScreenState extends State<DetectionScreen> {
                             : CameraLensDirection.back;
                     toggleCamera(newDirection);
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey,
-                    shape: CircleBorder(),
-                    padding: EdgeInsets.all(15),
-                  ),
-                  child: Icon(
-                    controller.description.lensDirection ==
-                            CameraLensDirection.back
-                        ? Icons.camera_front
-                        : Icons.camera_rear,
-                    color: Colors.white,
-                    size: 30,
-                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      );
 
-      // Improved header with exercise info
-      stackChildren.add(
-        Align(
-          alignment: Alignment.topCenter,
-          child: Container(
-            margin: EdgeInsets.only(top: 50, left: 20, right: 20),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              color: widget.exerciseDataModel.color,
-            ),
-            child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    widget.exerciseDataModel.title,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                // Start Exercise / Start Game button
+                if (!_showExerciseCount)
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _showExerciseCount = true;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      "Start Exercise",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  Image.asset(
-                    'assets/${widget.exerciseDataModel.image}',
-                    height: 50,
+
+                // Game button (only shown when exercise counting is active)
+                if (_showExerciseCount)
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _showGame = true;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      "Play Game",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ],
-              ),
+              ],
             ),
-            width: MediaQuery.of(context).size.width,
-            height: 70,
           ),
         ),
       );
@@ -419,7 +425,6 @@ class _DetectionScreenState extends State<DetectionScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Container(
-        margin: const EdgeInsets.only(top: 0),
         color: Colors.black,
         child: Stack(children: stackChildren),
       ),
@@ -474,7 +479,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     if (avgElbowAngle < 100 && inPlankPosition && shouldersAligned) {
       if (!isLowered) {
         isLowered = true;
-        _isLoweredStreamController.add(true); // ✅ Local stream used here
+        _isLoweredStreamController.add(true);
         print("Pushup lowered position detected");
       }
     } else if (avgElbowAngle > 150 &&
@@ -483,7 +488,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
         shouldersAligned) {
       pushUpCount++;
       isLowered = false;
-      _isLoweredStreamController.add(false); // ✅ Local stream used here
+      _isLoweredStreamController.add(false);
       print("Pushup count: $pushUpCount");
       setState(() {});
     }

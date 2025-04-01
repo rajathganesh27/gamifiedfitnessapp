@@ -288,12 +288,12 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
       if (user != null) {
         final uid = user.uid;
 
-        // 🔄 Fetch display name from 'users' collection
+        // Fetch display name from 'users' collection
         final userDoc =
             await FirebaseFirestore.instance.collection('users').doc(uid).get();
         final displayName = userDoc.data()?['name'] ?? 'Anonymous';
 
-        // ✅ Separate collection for Jumping Jack
+        // Separate collection for Jumping Jack
         final jumpingJackCollection = FirebaseFirestore.instance.collection(
           'jumping_jacks',
         );
@@ -304,7 +304,7 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // ✅ Separate collection for Combined Scores
+        // Separate collection for Combined Scores
         final combinedCollection = FirebaseFirestore.instance.collection(
           'combined_scores',
         );
@@ -315,11 +315,11 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
           'timestamp': Timestamp.now(),
         }, SetOptions(merge: true));
 
-        // 🔄 Fetch updated combined score
+        // Fetch updated combined score
         final combinedDoc = await combinedCollection.doc(uid).get();
         final combinedScore = (combinedDoc.data()?['score'] ?? 0) as int;
 
-        // ✅ Update level
+        // Update level
         final levelName = determineLevel(combinedScore);
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'level': levelName,
@@ -349,358 +349,386 @@ class _JumpingJackGameState extends State<JumpingJackGame> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Camera background
-        if (widget.cameraController != null &&
-            widget.cameraController!.value.isInitialized)
-          Positioned.fill(child: CameraPreview(widget.cameraController!)),
+    final Size size = MediaQuery.of(context).size;
 
-        // Semi-transparent overlay
-        Positioned.fill(child: Container(color: Colors.black.withOpacity(0.2))),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Camera background
+          if (widget.cameraController != null &&
+              widget.cameraController!.value.isInitialized)
+            Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: size.width,
+              height: size.height,
+              child: AspectRatio(
+                aspectRatio: widget.cameraController!.value.aspectRatio,
+                child: CameraPreview(widget.cameraController!),
+              ),
+            ),
 
-        // Pose visualization
-        if (widget.poseResults != null &&
-            widget.poseResults!.isNotEmpty &&
-            widget.cameraController != null)
+          // Dark overlay
           Positioned.fill(
-            child: CustomPaint(
-              painter: PosePainter(
-                Size(
-                  widget.cameraController!.value.previewSize!.height,
-                  widget.cameraController!.value.previewSize!.width,
-                ),
-                widget.poseResults!,
-              ),
-            ),
+            child: Container(color: Colors.black.withOpacity(0.3)),
           ),
 
-        // Jumping jack visual guide
-        if (_gameActive)
-          Positioned(
-            top: 100,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color:
-                      _multiplier >= 2.0
-                          ? Colors.orange.withOpacity(0.3)
-                          : Colors.purple.withOpacity(0.2),
-                  border: Border.all(
-                    color: _multiplier >= 2.0 ? Colors.orange : Colors.purple,
-                    width: 3,
+          // Pose skeleton visualization
+          if (widget.poseResults != null &&
+              widget.poseResults!.isNotEmpty &&
+              widget.cameraController != null)
+            Positioned(
+              top: 0.0,
+              left: 0.0,
+              width: size.width,
+              height: size.height,
+              child: CustomPaint(
+                painter: PosePainter(
+                  Size(
+                    widget.cameraController!.value.previewSize!.height,
+                    widget.cameraController!.value.previewSize!.width,
                   ),
-                ),
-                child: Icon(
-                  _jackProgress > 0.5
-                      ? Icons.accessibility
-                      : Icons.accessibility_new,
-                  size: 80,
-                  color: Colors.white,
+                  widget.poseResults!,
+                  isFrontCamera:
+                      _currentLensDirection == CameraLensDirection.front,
                 ),
               ),
             ),
-          ),
 
-        // Jump progress indicator
-        if (_gameActive)
+          // Top header with game title - Matching the Squat game style
           Positioned(
-            top: 230,
-            left: 40,
-            right: 40,
-            child: LinearProgressIndicator(
-              value: _jackProgress,
-              backgroundColor: Colors.grey.withOpacity(0.3),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                _multiplier >= 2.0 ? Colors.orange : Colors.purple,
-              ),
-              minHeight: 10,
-            ),
-          ),
-
-        // Level progress display
-        if (_gameActive)
-          Positioned(
-            top: 40,
+            top: 0,
             left: 0,
             right: 0,
-            child: Center(
+            child: Container(
+              padding: EdgeInsets.only(top: 60, bottom: 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+                ),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    "Jumping Jack Game",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (_gameActive)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        "Score: $_score",
+                        style: TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // Game status indicator - level progress and jack count
+          if (_gameActive)
+            Positioned(
+              top: 150,
+              left: 20,
+              right: 20,
               child: Container(
-                width: 200,
-                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 20),
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 decoration: BoxDecoration(
                   color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Column(
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Level $_currentLevel',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '$_jumpingJackCount / $_targetJacks',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: LinearProgressIndicator(
+                        value: _jumpingJackCount / _targetJacks,
+                        backgroundColor: Colors.grey.withOpacity(0.3),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          _multiplier >= 2.0 ? Colors.orange : Colors.green,
+                        ),
+                        minHeight: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Jumping jack progress indicator
+          if (_gameActive)
+            Positioned(
+              top: 230,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color:
+                        _jackProgress > 0.5
+                            ? Colors.green.withOpacity(0.7)
+                            : Colors.blue.withOpacity(0.5),
+                    border: Border.all(
+                      color: _jackProgress > 0.5 ? Colors.green : Colors.blue,
+                      width: 3,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      _jackProgress > 0.5
+                          ? Icons.accessibility
+                          : Icons.accessibility_new,
+                      size: 60,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Point effects - floating numbers
+          ..._pointEffects.map((effect) {
+            return Positioned(
+              left: effect.x - 50,
+              top: effect.y - 25,
+              child: Opacity(
+                opacity: effect.opacity,
+                child: Transform.scale(
+                  scale: effect.scale,
+                  child: Text(
+                    effect.text,
+                    style: TextStyle(
+                      color: effect.color,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black,
+                          blurRadius: 2,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+
+          // Streak indicator
+          if (_gameActive && _streak >= 3)
+            Positioned(
+              top: 100,
+              right: 20,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.whatshot, color: Colors.white, size: 18),
+                    SizedBox(width: 5),
                     Text(
-                      'Level $_currentLevel',
+                      'x${_multiplier.toStringAsFixed(1)}',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
-                    SizedBox(height: 5),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: _jumpingJackCount / _targetJacks,
-                        backgroundColor: Colors.grey.withOpacity(0.3),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.purple,
-                        ),
-                        minHeight: 10,
+                  ],
+                ),
+              ),
+            ),
+
+          // Countdown display
+          if (_isCountingDown)
+            Center(
+              child: Container(
+                padding: EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(
+                    0.8,
+                  ), // Changed to blue to match SquatGame
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$_countdownValue',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 60,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+          // Game over display
+          if (_gameOver)
+            Center(
+              child: Container(
+                padding: EdgeInsets.all(20),
+                width: 280,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(
+                    0.8,
+                  ), // Changed to red to match SquatGame
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Game Over!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 5),
+                    SizedBox(height: 15),
                     Text(
-                      '$_jumpingJackCount / $_targetJacks',
-                      style: TextStyle(color: Colors.white, fontSize: 14),
+                      'Final Score: $_score',
+                      style: TextStyle(color: Colors.white, fontSize: 22),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Level Reached: $_currentLevel',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Jumping Jacks: $_jumpingJackCount',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
 
-        // Score and streak display
-        Positioned(
-          top: 40,
-          right: 20,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.purple,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'Score: $_score',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+          // Instructions
+          if (!_gameActive && !_isCountingDown && !_gameOver)
+            Positioned(
+              bottom: 120,
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(15),
                 ),
-                if (_streak >= 3)
-                  Row(
-                    children: [
-                      Icon(Icons.whatshot, color: Colors.orange, size: 16),
-                      Text(
-                        'Streak: $_streak (${_multiplier.toStringAsFixed(1)}x)',
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ),
-
-        // Countdown display
-        if (_isCountingDown)
-          Center(
-            child: Container(
-              padding: EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.8),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                '$_countdownValue',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 60,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-        // Point effects
-        ..._pointEffects.map((effect) {
-          return Positioned(
-            left: effect.x - 50,
-            top: effect.y - 25,
-            child: Opacity(
-              opacity: effect.opacity,
-              child: Transform.scale(
-                scale: effect.scale,
                 child: Text(
-                  effect.text,
-                  style: TextStyle(
-                    color: effect.color,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black,
-                        blurRadius: 2,
-                        offset: Offset(1, 1),
-                      ),
-                    ],
-                  ),
+                  'Complete jumping jacks to level up! Build a streak to multiply your points. Try to reach the highest level you can!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
             ),
-          );
-        }).toList(),
 
-        // Game over display
-        if (_gameOver)
-          Center(
+          // Bottom controls - Matching SquatGame style
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
             child: Container(
-              padding: EdgeInsets.all(30),
-              width: 300,
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Game Over!',
-                    style: TextStyle(
+                  // Camera toggle button
+                  FloatingActionButton(
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    child: Icon(
+                      _currentLensDirection == CameraLensDirection.back
+                          ? Icons.camera_front
+                          : Icons.camera_rear,
                       color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
                     ),
+                    onPressed: _toggleCamera,
                   ),
-                  SizedBox(height: 20),
-                  Text(
-                    'Final Score: $_score',
-                    style: TextStyle(color: Colors.white, fontSize: 24),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Level Reached: $_currentLevel',
-                    style: TextStyle(color: Colors.white, fontSize: 20),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Jumping Jacks: $_jumpingJackCount',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                  SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: startGame,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
+
+                  // Play button or Exit button
+                  if (!_gameActive && !_isCountingDown)
+                    ElevatedButton(
+                      onPressed: startGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        _gameOver ? "Play Again" : "Start Game",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: _endGame,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        "Exit Game",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    child: Text('Play Again', style: TextStyle(fontSize: 18)),
-                  ),
                 ],
               ),
             ),
           ),
-
-        // Instructions
-        if (!_gameActive && !_isCountingDown && !_gameOver)
-          Positioned(
-            bottom: 120,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Text(
-                'Complete jumping jacks to level up! Build a streak to multiply your points. Try to reach the highest level you can!',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-            ),
-          ),
-
-        // Play button
-        if (!_gameActive && !_isCountingDown)
-          Positioned(
-            bottom: 50,
-            left: 40,
-            right: 40,
-            child: ElevatedButton(
-              onPressed: startGame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple,
-                padding: EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-              child: Text(
-                _gameOver ? 'Play Again' : 'Start',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-
-        // Back button
-        Positioned(
-          top: 40,
-          left: 20,
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white, size: 30),
-            onPressed: () {
-              widget.onGameComplete(_score);
-            },
-          ),
-        ),
-
-        // Camera toggle button
-        Positioned(
-          bottom: 20,
-          left: 20,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: Icon(
-                _currentLensDirection == CameraLensDirection.back
-                    ? Icons.camera_front
-                    : Icons.camera_rear,
-                color: Colors.white,
-                size: 30,
-              ),
-              onPressed: _toggleCamera,
-            ),
-          ),
-        ),
-
-        // Quit game button (only during active game)
-        if (_gameActive)
-          Positioned(
-            bottom: 20,
-            right: 20,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: Icon(Icons.stop, color: Colors.white, size: 30),
-                onPressed: _endGame,
-              ),
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
